@@ -1,16 +1,54 @@
-# React + Vite
+# Boston T Tracker 🚇
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A lightweight, installable Progressive Web App (PWA) for tracking real-time MBTA subway and Silver Line arrivals in Boston. Built with React and Vite, this app focuses on speed, mobile usability, and offline-first design.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* **Real-Time Predictions:** Live arrival times fetched directly from the [MBTA V3 API](https://api-v3.mbta.com/).
+* **Multi-Line Support:**
+    * Subway: Red, Orange, Blue, Green (B, C, D, E), Mattapan.
+    * Bus: Silver Line (SL1, SL2, SL3, SL4, SL5).
+* **Favorites System:** Save your most frequent stops for one-tap access (persists locally on your device).
+* **"New Train" Tracker:** Automatically identifies and highlights new Red Line cars (CRRC #1900+) with a ✨ sparkle icon.
+* **Mobile-First Design:**
+    * Swipeable horizontal lists for arrival times.
+    * Dynamic line colors (Red for Red Line, Orange for Orange Line, etc.).
+    * Optimized for "Add to Home Screen" installation.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Framework:** React 18
+* **Build Tool:** Vite
+* **Styling:** Pure CSS (CSS Variables, Flexbox, Scroll Snap)
+* **Data Source:** MBTA V3 API
+* **Storage:** `localStorage` (No database required)
 
-## Expanding the ESLint configuration
+## 🚀 Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerequisites
+* Node.js (LTS version recommended)
+* npm or yarn
+
+### Installation
+
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/yourusername/boston-t-tracker.git](https://github.com/yourusername/boston-t-tracker.git)
+    cd boston-t-tracker
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Run the local development server**
+    ```bash
+    npm run dev
+    ```
+    The app will start at `http://localhost:5173`.
+
+### Testing on Mobile (Local Network)
+To test on your phone while developing:
+```bash
+npm run dev -- --host
