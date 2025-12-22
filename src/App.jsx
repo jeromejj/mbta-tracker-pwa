@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import MapView from './MapView'; // <--- IMPORT THE NEW FILE
 import './App.css';
 
 // --- CONFIGURATION ---
@@ -43,7 +44,7 @@ const useMbtaData = () => {
   const [routes, setRoutes] = useState([]);
   const [stops, setStops] = useState([]);
   const [predictionGroups, setPredictionGroups] = useState([]);
-  const [vehicles, setVehicles] = useState([]); // <--- NEW: For Map
+  const [vehicles, setVehicles] = useState([]); 
   const [loading, setLoading] = useState(false);
 
   const normalizeName = (name) => {
@@ -81,7 +82,7 @@ const useMbtaData = () => {
     try {
       const response = await fetch(`https://api-v3.mbta.com/stops?filter[route]=${routeId}`);
       const json = await response.json();
-      return json.data; // Return data for immediate use
+      return json.data; 
     } catch (err) {
       console.error(err);
       return [];
@@ -90,7 +91,7 @@ const useMbtaData = () => {
     }
   };
 
-  // 3. Fetch Predictions (Arrivals)
+  // 3. Fetch Predictions
   const fetchPredictions = async (routeId, stopId, currentStopsList = stops) => {
     try {
       const currentStop = currentStopsList.find(s => s.id === stopId);
@@ -152,23 +153,19 @@ const useMbtaData = () => {
     }
   };
 
-  // 4. Fetch Vehicles (For Map) - FIXED PARENT STATION LOGIC
+  // 4. Fetch Vehicles (With Parent Station Fix)
   const fetchVehicles = async (routeId, directionId) => {
     try {
-      // We include 'stop' so we can look up the Parent Station ID
       const response = await fetch(
         `https://api-v3.mbta.com/vehicles?filter[route]=${routeId}&include=stop`
       );
       const json = await response.json();
       
-      // 1. Build a lookup map: Child Platform ID -> Parent Station ID
-      // (e.g. "70080" -> "place-sstat")
       const stopParentMap = {};
       if (json.included) {
         json.included.forEach(item => {
           if (item.type === 'stop') {
             const parentId = item.relationships?.parent_station?.data?.id;
-            // If it has a parent, map it. If not, use its own ID.
             stopParentMap[item.id] = parentId || item.id;
           }
         });
@@ -178,13 +175,12 @@ const useMbtaData = () => {
         .filter(v => v.attributes.direction_id === directionId)
         .map(v => {
           const rawStopId = v.relationships?.stop?.data?.id;
-          // Use the map to translate "Platform ID" to "Parent ID"
           const parentStationId = stopParentMap[rawStopId] || rawStopId;
 
           return {
             id: v.id,
             status: v.attributes.current_status,
-            stopId: parentStationId, // Now this matches your Map stops!
+            stopId: parentStationId, 
             label: v.attributes.label,
             isNew: isNewTrain(routeId, v.attributes.label)
           };
@@ -202,6 +198,7 @@ const useMbtaData = () => {
   };
 };
 
+// --- HELPER: Colors ---
 const getLineColor = (routeId) => {
   if (!routeId) return '#003da5'; 
   const id = routeId.toLowerCase();
@@ -213,139 +210,6 @@ const getLineColor = (routeId) => {
   return '#003da5';
 };
 
-
-// --- MAP HELPERS ---
-const RED_LINE_ASHMONT = ['place-shmnl', 'place-fldcr', 'place-smmnl', 'place-asmnl'];
-const RED_LINE_BRAINTREE = ['place-nqncy', 'place-wlsta', 'place-qnctr', 'place-qamnl', 'place-brntn'];
-
-// Reusable component for a single stop row
-const MapStopRow = ({ stop, vehicles }) => {
-  const trainsHere = vehicles.filter(v => v.stopId === stop.id);
-  
-  return (
-    <div className="map-stop-row">
-      <div className="map-marker-area">
-        <div className="stop-dot"></div>
-        {trainsHere.map(train => (
-          <div key={train.id} className={`train-marker ${train.status === 'IN_TRANSIT_TO' ? 'moving' : ''}`}>
-             <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
-          </div>
-        ))}
-      </div>
-      <div className="map-stop-name">{stop.attributes.name}</div>
-    </div>
-  );
-};
-
-// --- SUB-COMPONENT: MAP VIEW ---
-const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => {
-  if (!route) return <div className="no-selection-msg">Please select a line above</div>;
-
-  // FIX: Mattapan should NOT use the Red Line branch logic. 
-  // It is a simple line, so we strictly check for "Red" here.
-  const isRedLine = route.id === 'Red';
-
-  // --- RED LINE SPECIFIC LOGIC ---
-  const renderRedLine = () => {
-    // 1. Split stops into segments
-    const trunkStops = [];
-    const ashmontStops = [];
-    const braintreeStops = [];
-
-    stops.forEach(stop => {
-      if (RED_LINE_ASHMONT.includes(stop.id)) {
-        ashmontStops.push(stop);
-      } else if (RED_LINE_BRAINTREE.includes(stop.id)) {
-        braintreeStops.push(stop);
-      } else {
-        trunkStops.push(stop);
-      }
-    });
-
-    // 2. Handle Direction Reversing
-    const isOutbound = directionId === 0;
-
-    const orderedTrunk = isOutbound ? trunkStops : [...trunkStops].reverse();
-    const orderedAshmont = isOutbound ? ashmontStops : [...ashmontStops].reverse();
-    const orderedBraintree = isOutbound ? braintreeStops : [...braintreeStops].reverse();
-
-    return (
-      <div className="thermometer red-line-layout">
-        {/* Inbound: Branches First */}
-        {!isOutbound && (
-          <div className="branches-container">
-            <div className="branch-column">
-              <div className="branch-label">Ashmont</div>
-              <div className="thermometer-line"></div>
-              {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
-            </div>
-            <div className="branch-column">
-              <div className="branch-label">Braintree</div>
-              <div className="thermometer-line"></div>
-              {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
-            </div>
-          </div>
-        )}
-
-        {/* Trunk (Middle) */}
-        <div className="trunk-container">
-          <div className={`trunk-line ${!isOutbound ? 'merge-up' : 'split-down'}`}></div>
-          {orderedTrunk.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
-        </div>
-
-        {/* Outbound: Branches Last */}
-        {isOutbound && (
-          <div className="branches-container top-connector">
-            <div className="branch-column">
-              <div className="branch-label">Ashmont</div>
-              <div className="thermometer-line"></div>
-              {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
-            </div>
-            <div className="branch-column">
-              <div className="branch-label">Braintree</div>
-              <div className="thermometer-line"></div>
-              {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // --- STANDARD LOGIC (Orange, Blue, Green, Mattapan) ---
-  const renderStandardLine = () => {
-    // Simple reverse for Inbound
-    const displayStops = directionId === 1 ? [...stops].reverse() : stops;
-    
-    return (
-      <div className="thermometer">
-        <div className="thermometer-line main-line"></div>
-        {displayStops.map(stop => (
-          <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <div className="map-container fade-in">
-      <div className="direction-toggle">
-        <label>Direction</label>
-        <div className="toggle-row">
-          <button className={directionId === 0 ? "active" : ""} onClick={() => onDirectionChange(0)}>
-            {route.attributes.direction_names[0]}
-          </button>
-          <button className={directionId === 1 ? "active" : ""} onClick={() => onDirectionChange(1)}>
-            {route.attributes.direction_names[1]}
-          </button>
-        </div>
-      </div>
-
-      {isRedLine ? renderRedLine() : renderStandardLine()}
-    </div>
-  );
-};
-
 // --- MAIN APP ---
 function App() {
   const { 
@@ -354,29 +218,24 @@ function App() {
   } = useMbtaData();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   
-  const [currentTab, setCurrentTab] = useState('list'); // 'list' or 'map'
-  
+  const [currentTab, setCurrentTab] = useState('list');
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
-  const [mapDirection, setMapDirection] = useState(0); // 0 or 1
+  const [mapDirection, setMapDirection] = useState(0);
 
   // Polling Logic
   useEffect(() => {
     let intervalId;
     const poll = () => {
-      // If List View
       if (currentTab === 'list' && selectedRoute && selectedStop) {
         fetchPredictions(selectedRoute.id, selectedStop.id);
       }
-      // If Map View
       if (currentTab === 'map' && selectedRoute) {
         fetchVehicles(selectedRoute.id, mapDirection);
       }
     };
-
-    poll(); // Initial run
-    intervalId = setInterval(poll, 4000); // 4s refresh
-
+    poll(); 
+    intervalId = setInterval(poll, 4000); 
     return () => clearInterval(intervalId);
   }, [currentTab, selectedRoute, selectedStop, mapDirection]);
 
@@ -399,12 +258,12 @@ function App() {
   };
 
   const handleFavoriteClick = async (fav) => {
-    setCurrentTab('list'); // Force switch to list
+    setCurrentTab('list');
     const routeObj = routes.find(r => r.id === fav.routeId);
     if (!routeObj) return;
     setSelectedRoute(routeObj);
     const fetchedStops = await fetchStops(fav.routeId);
-    setStops(fetchedStops); // Important: Update stops state so map works too
+    setStops(fetchedStops); 
     const stopObj = fetchedStops.find(s => s.id === fav.stopId);
     if (stopObj) {
       setSelectedStop(stopObj);
@@ -418,7 +277,7 @@ function App() {
     <div className="app-container" style={{ '--line-color': lineColor }}>
       <header><h1>Boston T Tracker</h1></header>
 
-      {/* --- FAVORITES (Only on List View) --- */}
+      {/* --- FAVORITES --- */}
       {currentTab === 'list' && favorites.length > 0 && (
         <div className="favorites-container">
           <div className="favorites-label">QUICK ACCESS</div>
@@ -439,7 +298,6 @@ function App() {
       )}
 
       <main className="main-content">
-        {/* --- COMMON: Line Selector --- */}
         <div className="selector-group">
           <label>Select Line</label>
           <select onChange={handleRouteSelect} value={selectedRoute?.id || ""}>
