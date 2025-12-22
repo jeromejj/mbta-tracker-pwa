@@ -23,7 +23,15 @@ const useMbtaData = () => {
     return name.toLowerCase().replace("street", "st").replace(/\s+/g, '').trim();
   };
 
-  // 1. Fetch Routes (No changes)
+  // Helper: Check if train is "New" (Red Line 1900 series)
+  const isNewTrain = (routeId, label) => {
+    if (routeId !== 'Red' || !label) return false;
+    // Label can be "1900" or "1900-1901"
+    const carNumber = parseInt(label.split('-')[0], 10);
+    return !isNaN(carNumber) && carNumber >= 1900;
+  };
+
+  // 1. Fetch Routes
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
@@ -39,7 +47,7 @@ const useMbtaData = () => {
     fetchRoutes();
   }, []);
 
-  // 2. Fetch Stops (No changes)
+  // 2. Fetch Stops
   const fetchStops = async (routeId) => {
     setLoading(true);
     setStops([]);
@@ -55,26 +63,30 @@ const useMbtaData = () => {
     }
   };
 
-  // 3. Fetch Predictions (UPDATED WITH TERMINAL FILTER)
+  // 3. Fetch Predictions (UPDATED)
   const fetchPredictions = async (routeId, stopId) => {
     try {
-      // Find the name of the station we are currently at (e.g., "Alewife")
-      // We need this to filter out trains that are terminating here.
       const currentStop = stops.find(s => s.id === stopId);
       const currentStopNameNorm = currentStop ? normalizeName(currentStop.attributes.name) : "";
 
+      // UPDATE: Added "vehicle" to include
       const response = await fetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip`
+        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip,vehicle`
       );
       const json = await response.json();
       const now = new Date();
       
-      // 3a. Trip Map
+      // 3a. Build Maps for Trip (Headsign) and Vehicle (Label/Number)
       const tripMap = {};
+      const vehicleMap = {};
+      
       if (json.included) {
         json.included.forEach(item => {
           if (item.type === 'trip') {
             tripMap[item.id] = item.attributes.headsign;
+          }
+          if (item.type === 'vehicle') {
+            vehicleMap[item.id] = item.attributes.label; // e.g., "1900"
           }
         });
       }
@@ -90,15 +102,16 @@ const useMbtaData = () => {
           const minutes = Math.floor(diffMs / 60000);
           
           const tripId = pred.relationships?.trip?.data?.id;
-          let headsign = tripMap[tripId] || pred.attributes.headsign || "Train";
+          const vehicleId = pred.relationships?.vehicle?.data?.id;
           
-          // Fix Green Line vague names
+          let headsign = tripMap[tripId] || pred.attributes.headsign || "Train";
+          let carLabel = vehicleMap[vehicleId]; // The car number (e.g. 1905)
+
+          // Fix Green Line names
           if (headsign === "Green Line D") headsign = "Riverside"; 
           if (headsign === "Green Line E") headsign = "Heath St";
 
-          // --- THE FIX: TERMINAL FILTER ---
-          // If the train's destination is the same as where we are standing, skip it.
-          // (e.g. You are at Alewife, and the train is "To Alewife")
+          // Terminal Filter
           if (normalizeName(headsign) === currentStopNameNorm) {
             return; 
           }
@@ -114,7 +127,8 @@ const useMbtaData = () => {
           groups[headsign].trains.push({
             id: pred.id,
             minutes: minutes < 1 ? "Now" : `${minutes} min`,
-            status: pred.attributes.status
+            status: pred.attributes.status,
+            isNew: isNewTrain(routeId, carLabel) // Check if new train
           });
         }
       });
@@ -123,7 +137,6 @@ const useMbtaData = () => {
       const finalGroups = Object.values(groups)
         .map(group => ({
           ...group,
-          // Ensure they are sorted by time (lowest first) before slicing
           trains: group.trains
             .sort((a, b) => (a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)))
         }))
@@ -141,14 +154,14 @@ const useMbtaData = () => {
 
 // --- HELPER: Get Official MBTA Colors ---
 const getLineColor = (routeId) => {
-  if (!routeId) return '#003da5'; // Default Blue
+  if (!routeId) return '#003da5'; 
   const id = routeId.toLowerCase();
   
   if (id.includes('red') || id === 'mattapan') return '#da291c';
   if (id.includes('orange')) return '#ed8b00';
   if (id.includes('blue')) return '#003da5';
   if (id.includes('green')) return '#00843d';
-  if (id.includes('74') || id.includes('75')) return '#7c878e'; // Silver Line
+  if (id.includes('74') || id.includes('75')) return '#7c878e'; 
   
   return '#003da5';
 };
@@ -159,7 +172,6 @@ function App() {
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
 
-  // Auto-Refresh Logic
   useEffect(() => {
     let intervalId;
     if (selectedRoute && selectedStop) {
@@ -185,7 +197,6 @@ function App() {
     setSelectedStop(stopObj);
   };
 
-  // Calculate color based on current selection
   const lineColor = getLineColor(selectedRoute?.id);
 
   return (
@@ -216,7 +227,6 @@ function App() {
         )}
 
         {selectedStop && (
-          /* --- INJECT COLOR HERE --- */
           <div 
             className="predictions-container slide-in"
             style={{ '--line-color': lineColor }} 
@@ -236,7 +246,11 @@ function App() {
                     <div className="train-row-container">
                       {group.trains.map(t => (
                         <div key={t.id} className="train-pill">
-                          <span className="time">{t.minutes}</span>
+                          <span className="time">
+                            {t.minutes}
+                            {/* NEW TRAIN INDICATOR */}
+                            {t.isNew && <span className="new-badge">✨</span>}
+                          </span>
                         </div>
                       ))}
                     </div>

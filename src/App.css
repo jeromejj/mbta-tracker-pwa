@@ -133,23 +133,33 @@ select {
 }
 
 .train-pill {
-  /* Colors */
-  background-color: #eef4ff; 
+  /* Keep your dynamic colors */
   background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
   border: 1px solid var(--line-color, #003da5);
   color: var(--line-color, #003da5);
   
-  padding: 10px 0;
+  /* --- SIZING FIXES --- */
+  padding: 10px 16px;  /* Added 16px padding on sides so text isn't cramped */
+  min-width: 100px;    /* Increased from 80px to 100px to fit the star */
+  
+  /* --- LAYOUT FIXES --- */
+  white-space: nowrap; /* Forces "12 min ✨" to stay on one line (Critical) */
+  display: flex;       /* Use Flexbox to center the text and star perfectly */
+  justify-content: center;
+  align-items: center;
+  
+  /* Standard styling */
   border-radius: 8px;
   font-weight: 700;
   font-size: 1.2rem;
-  
-  /* Sizing */
-  min-width: 80px;
-  text-align: center;
-  
-  /* Prevent shrinking */
-  flex-shrink: 0; 
+  flex-shrink: 0;      /* Prevents it from squishing in the scroll list */
+}
+
+.new-badge {
+  margin-left: 6px;
+  font-size: 0.9em;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); /* Golden glow */
 }
 
 .no-data {
