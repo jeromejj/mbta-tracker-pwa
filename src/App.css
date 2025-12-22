@@ -234,3 +234,286 @@ select {
   font-style: italic;
   margin-top: 20px;
 }
+
+/* --- BOTTOM NAVIGATION --- */
+.main-content {
+  padding-bottom: 80px; /* Space for the bottom bar */
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  z-index: 1000;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #999;
+  cursor: pointer;
+}
+
+.nav-item.active {
+  color: var(--line-color, #003da5);
+}
+
+.nav-icon {
+  font-size: 1.5rem;
+  margin-bottom: 2px;
+}
+
+.nav-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* --- MAP VIEW (Thermometer) --- */
+/* --- MAP VIEW (Thermometer) --- */
+.no-selection-msg {
+  text-align: center;
+  color: #888;
+  margin-top: 40px;
+  font-style: italic;
+}
+
+.direction-toggle {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.toggle-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.toggle-row button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-row button.active {
+  background: var(--line-color);
+  color: white;
+  border-color: var(--line-color);
+}
+
+.thermometer {
+  position: relative;
+  background: white;
+  padding: 20px 10px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+/* The vertical line (Standard) */
+.thermometer-line {
+  position: absolute;
+  left: 30px; 
+  top: 20px;
+  bottom: 20px;
+  width: 4px;
+  
+  /* UPDATE: Use the line color, but slightly transparent to not overpower trains */
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3; /* Subtle track look */
+  
+  border-radius: 2px;
+  z-index: 0;
+}
+
+/* --- RED LINE BRANCH MAP --- */
+.red-line-layout {
+  padding: 10px;
+}
+
+.trunk-container {
+  position: relative;
+  padding-left: 0; 
+}
+
+/* The Trunk Line (Red Line specific) */
+.trunk-line {
+  position: absolute;
+  left: 30px; 
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  
+  /* UPDATE: Dynamic Color */
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+  
+  z-index: 0;
+}
+
+.branches-container {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-top: -10px; 
+}
+
+.branches-container.top-connector {
+  margin-top: 0;
+  padding-top: 20px; 
+}
+
+/* UPDATE: The Split Connector Lines (The "Y" shape) */
+.branches-container.top-connector::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 30px; 
+  right: 50%; 
+  height: 20px;
+  
+  border-left: 4px solid var(--line-color, #ddd); 
+  border-bottom: 4px solid var(--line-color, #ddd);
+  opacity: 0.3; /* Match opacity */
+}
+
+.branches-container.top-connector::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%; 
+  right: 30px; 
+  height: 20px;
+  
+  border-right: 4px solid var(--line-color, #ddd);
+  border-bottom: 4px solid var(--line-color, #ddd);
+  opacity: 0.3; /* Match opacity */
+}
+
+.branch-column {
+  flex: 1;
+  position: relative;
+  padding-top: 10px;
+}
+
+.branch-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--line-color, #888); /* Make label match line too */
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.branch-column .thermometer-line {
+  left: 50%;
+  margin-left: -2px;
+}
+
+.map-stop-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  z-index: 1;
+}
+
+.map-marker-area {
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.stop-dot {
+  width: 12px;
+  height: 12px;
+  background: white;
+  
+  /* UPDATE: Make the dot border match the line */
+  border: 3px solid var(--line-color, #999);
+  
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.train-marker {
+  position: absolute;
+  left: 35px;
+  background: white;
+  border: 2px solid var(--line-color);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+  transition: top 0.3s ease;
+}
+
+.train-marker.moving {
+  border-style: dashed; 
+}
+
+.map-stop-name {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+  padding-left: 10px;
+}
+
+/* Branch specific overrides */
+.branch-column .map-stop-row {
+  flex-direction: column;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.branch-column .map-marker-area {
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.branch-column .map-stop-name {
+  padding-left: 0;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.branch-column .train-marker {
+  left: 50%;
+  margin-left: 8px; 
+}
+
+.trunk-container .train-marker {
+  left: 35px;
+}
+
+.main-line {
+  left: 30px;
+  top: 20px;
+  bottom: 20px;
+}
