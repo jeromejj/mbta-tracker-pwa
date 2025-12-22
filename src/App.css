@@ -1,7 +1,35 @@
-/* --- 1. THE FOUNDATION (Nuclear Reset) --- */
+/* =========================================
+   1. VARIABLES & RESET
+   ========================================= */
+:root {
+  /* Colors */
+  --bg-app: #f4f4f9;
+  --bg-card: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #888888;
+  --border-light: #dddddd;
+  
+  /* Brand Colors (Fallbacks) */
+  --brand-blue: #003da5;
+  --brand-gold: #ffb700;
+  
+  /* Spacing & Layout */
+  --spacing-sm: 10px;
+  --spacing-md: 15px;
+  --spacing-lg: 20px;
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --nav-height: 80px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-nav: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
 html {
-  box-sizing: border-box; 
-  width: 100%; 
+  box-sizing: border-box;
+  width: 100%;
   overflow-x: hidden;
 }
 
@@ -14,72 +42,128 @@ body {
   padding: 0;
   width: 100%;
   max-width: 100%;
-  
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f4f4f9;
-  color: #333;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
-/* --- 2. MAIN CONTAINER --- */
+/* =========================================
+   2. GLOBAL LAYOUT
+   ========================================= */
 .app-container {
-  width: 100%; 
-  max-width: 600px; /* Cap width on desktop */
-  margin: 0 auto; 
-  padding: 15px; 
-  /* Space for bottom nav */
-  padding-bottom: 90px;
-  overflow: hidden; 
+  width: 100%;
+  max-width: 600px; /* Desktop cap */
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  padding-bottom: 90px; /* Space for bottom nav */
+  overflow: hidden;
 }
 
 header h1 {
   text-align: center;
   font-size: 1.5rem;
-  margin-top: 10px;
-  margin-bottom: 20px;
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
-/* --- 3. WHITE CARDS --- */
-.selector-group, 
+/* Common Utility: Shared White Card Style */
+.card,
+.selector-group,
 .destination-card,
 .thermometer,
-.direction-toggle {
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
-  width: auto; 
-  min-width: 0; 
+.direction-toggle,
+.favorites-container {
+  background: var(--bg-card);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  margin-bottom: var(--spacing-lg);
+  width: auto;
+  min-width: 0;
 }
 
-.destination-card {
-  border-left: 6px solid var(--line-color, #003da5);
+/*Utility: Center Text/Icons */
+.no-data, .no-selection-msg {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  margin-top: 20px;
 }
 
-/* --- 4. FORM ELEMENTS --- */
+/* =========================================
+   3. FORM ELEMENTS
+   ========================================= */
 label {
   display: block;
   font-weight: 600;
   margin-bottom: 8px;
   font-size: 0.85rem;
   text-transform: uppercase;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 select {
   width: 100%;
   padding: 12px;
   font-size: 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-input);
+  
+  /* Critical: Force text visibility on Mobile Dark Mode */
   background-color: #ffffff !important;
-  color: #000000 !important; 
-  -webkit-text-fill-color: #000000 !important; 
-  appearance: none; 
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  appearance: none;
 }
 
-/* --- 5. PREDICTION LISTS --- */
+/* =========================================
+   4. FEATURE: FAVORITES
+   ========================================= */
+.favorites-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  margin-left: 5px;
+  letter-spacing: 0.5px;
+}
+
+.favorites-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fav-chip {
+  background: white;
+  border: 1px solid var(--border-light);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.fav-route-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--chip-color, #333);
+}
+
+/* =========================================
+   5. FEATURE: PREDICTIONS (LIST VIEW)
+   ========================================= */
 .predictions-header {
   display: flex;
   justify-content: space-between;
@@ -87,11 +171,18 @@ select {
   margin-bottom: 10px;
 }
 
-.destinations-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: auto; 
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--brand-gold);
+  cursor: pointer;
+  padding: 0 0 0 10px;
+  line-height: 1;
+}
+
+.destination-card {
+  border-left: 6px solid var(--line-color, var(--brand-blue));
 }
 
 .destination-card h3 {
@@ -102,25 +193,25 @@ select {
   padding-bottom: 8px;
 }
 
-/* --- 6. SCROLLING PILLS --- */
+/* Horizontal Scroll for Time Pills */
 .train-row-container {
   display: flex;
   gap: 10px;
-  width: 100%; 
-  overflow-x: auto; 
-  min-width: 0; 
+  width: 100%;
+  overflow-x: auto;
+  min-width: 0;
   padding-bottom: 5px;
-  -webkit-overflow-scrolling: touch; 
+  -webkit-overflow-scrolling: touch;
 }
 
 .train-pill {
-  background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
-  border: 1px solid var(--line-color, #003da5);
-  color: var(--line-color, #003da5);
+  /* Dynamic Background Mix */
+  background-color: color-mix(in srgb, var(--line-color, var(--brand-blue)), white 90%);
+  border: 1px solid var(--line-color, var(--brand-blue));
+  color: var(--line-color, var(--brand-blue));
   
   padding: 10px 16px;
   min-width: 100px;
-  
   border-radius: 8px;
   font-weight: 700;
   font-size: 1.2rem;
@@ -129,7 +220,7 @@ select {
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .new-badge {
@@ -138,64 +229,20 @@ select {
   filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
 }
 
-.no-data, .no-selection-msg {
-  text-align: center;
-  color: #999;
-  font-style: italic;
-  margin-top: 20px;
-}
-
-/* --- 7. FAVORITES & BOTTOM NAV --- */
-.favorites-list {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 5px; 
-  width: 100%;
-}
-
-.fav-chip {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  flex-shrink: 0; 
-}
-
-.fav-route-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--chip-color, #333);
-}
-
-.star-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #ffb700;
-  cursor: pointer;
-  padding: 0 0 0 10px; 
-  line-height: 1;
-}
-
+/* =========================================
+   6. NAVIGATION (BOTTOM BAR)
+   ========================================= */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  background: white;
-  border-top: 1px solid #ddd;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
   display: flex;
   justify-content: space-around;
   padding: 10px 0;
+  box-shadow: var(--shadow-nav);
   z-index: 1000;
 }
 
@@ -210,253 +257,8 @@ select {
 }
 
 .nav-item.active {
-  color: var(--line-color, #003da5);
+  color: var(--line-color, var(--brand-blue));
 }
 
 .nav-icon { font-size: 1.5rem; margin-bottom: 2px; }
 .nav-label { font-size: 0.75rem; font-weight: 600; }
-
-/* --- 8. MAP VIEW STYLES --- */
-
-/* Direction Toggles */
-.toggle-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.toggle-row button {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  background: #f9f9f9;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #666;
-  cursor: pointer;
-}
-
-.toggle-row button.active {
-  background: var(--line-color);
-  color: white;
-  border-color: var(--line-color);
-}
-
-/* Thermometer Base */
-.thermometer {
-  position: relative;
-  padding: 20px 10px;
-}
-
-.thermometer-line {
-  position: absolute;
-  top: 20px;
-  bottom: 20px;
-  width: 4px;
-  background-color: var(--line-color, #ddd);
-  opacity: 0.3;
-  border-radius: 2px;
-  z-index: 0;
-}
-
-/* Standard Line uses default positioning */
-.main-line {
-  left: 30px;
-}
-
-/* --- BRANCH LAYOUT (Red Line) --- */
-
-/* Layout Containers */
-.red-line-layout { padding: 10px; }
-.trunk-container { position: relative; }
-.branches-container {
-  display: flex;
-  justify-content: space-between;
-  position: relative;
-  width: 100%;
-}
-
-/* Trunk Line */
-.trunk-line {
-  position: absolute;
-  left: 30px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--line-color, #ddd);
-  opacity: 0.3;
-  z-index: 0;
-}
-
-/* 1. The Connector Layer */
-.branch-connector-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 40px; 
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Straight Line (Ashmont) */
-.connector-ashmont {
-  position: absolute;
-  left: 30px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--line-color, #ddd);
-  opacity: 0.3;
-}
-
-/* Rounded Curve (Braintree) */
-.connector-braintree {
-  position: absolute;
-  top: 0;
-  left: 30px;  /* Starts at Trunk X */
-  right: 25%;  /* Ends at Center of Right Column (50% / 2 = 25%) */
-  height: 30px;
-  
-  border-top: 4px solid var(--line-color, #ddd);
-  border-right: 4px solid var(--line-color, #ddd);
-  border-top-right-radius: 20px; /* Smooth Curve */
-  
-  opacity: 0.3;
-  box-sizing: border-box; 
-}
-
-/* 2. The Columns */
-.branch-column {
-  flex: 1; /* 50% width each */
-  position: relative;
-}
-
-/* Spacer for Connector overlap */
-.branch-spacer {
-  height: 30px; 
-  width: 100%;
-}
-
-.branch-label {
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--line-color, #888);
-  margin-bottom: 5px;
-  text-transform: uppercase;
-}
-
-/* Vertical Lines inside Branches */
-.branch-column .thermometer-line {
-  top: 0; 
-  bottom: 20px;
-  width: 4px;
-  background-color: var(--line-color, #ddd);
-  opacity: 0.3;
-  position: absolute;
-}
-
-/* ASHMONT: Force Line Left (30px) */
-.ashmont-col .thermometer-line {
-  left: 30px; 
-  margin-left: 0;
-}
-
-/* BRAINTREE: Center Line */
-.braintree-col .thermometer-line {
-  left: 50%;
-  margin-left: -2px;
-}
-
-/* --- ROWS & MARKERS --- */
-.map-stop-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 50px;
-  z-index: 1;
-}
-
-.map-marker-area {
-  width: 60px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.stop-dot {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border: 3px solid var(--line-color, #999);
-  border-radius: 50%;
-  z-index: 1;
-}
-
-.map-stop-name {
-  font-size: 0.95rem;
-  color: #333;
-  font-weight: 500;
-  flex: 1;
-  padding-left: 10px;
-}
-
-/* Train Icon */
-.train-marker {
-  position: absolute;
-  left: 35px;
-  background: white;
-  border: 2px solid var(--line-color);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 2;
-  transition: top 0.3s ease;
-}
-
-/* --- BRANCH SPECIFIC OVERRIDES --- */
-
-/* Ashmont: Align Left */
-.ashmont-col .map-marker-area {
-  justify-content: flex-start;
-  padding-left: 24px; /* (30px line - 6px half-dot) */
-  width: auto;
-}
-.ashmont-col .map-stop-row {
-  flex-direction: row; 
-  text-align: left;
-  padding: 0;
-}
-.ashmont-col .map-stop-name {
-  padding-left: 10px;
-  font-size: 0.9rem;
-}
-.ashmont-col .train-marker {
-  left: 35px; /* Fixed position */
-  margin-left: 0;
-}
-
-/* Braintree: Center */
-.braintree-col .map-marker-area {
-  justify-content: center;
-  width: 100%;
-}
-.braintree-col .map-stop-row {
-  flex-direction: column; /* Stack dot on top */
-  text-align: center;
-}
-.braintree-col .map-stop-name {
-  padding-left: 0;
-  font-size: 0.8rem;
-}
-.braintree-col .train-marker {
-  left: 50%;
-  margin-left: 8px; /* Offset right of center line */
-}

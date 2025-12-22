@@ -1,0 +1,201 @@
+/* =========================================
+   MAP VIEW (THERMOMETER)
+   ========================================= */
+
+/* --- DIRECTION TOGGLES --- */
+.toggle-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.toggle-row button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--border-light);
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-row button.active {
+  background: var(--line-color);
+  color: white;
+  border-color: var(--line-color);
+}
+
+/* --- BASE THERMOMETER --- */
+.thermometer {
+  position: relative;
+  padding: 20px 10px;
+}
+
+/* The Vertical Line Track */
+.thermometer-line, .trunk-line {
+  position: absolute;
+  width: 4px;
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+  border-radius: 2px;
+  z-index: 0;
+}
+
+/* Standard Line Position */
+.main-line {
+  left: 30px;
+  top: 20px;
+  bottom: 20px;
+}
+
+/* --- RED LINE BRANCH LAYOUT --- */
+.red-line-layout { padding: 10px; }
+.trunk-container { position: relative; }
+
+.trunk-line {
+  left: 30px;
+  top: 0;
+  bottom: 0;
+}
+
+.branches-container {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+  padding-top: 0; 
+}
+
+/* --- BRANCH CONNECTORS (The "Fork") --- */
+.branch-connector-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40px; 
+  pointer-events: none;
+  z-index: 0;
+}
+
+.connector-ashmont {
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+}
+
+.connector-braintree {
+  position: absolute;
+  top: 0;
+  left: 30px; 
+  right: 25%; /* Ends at center of right column */
+  height: 30px;
+  
+  border-top: 4px solid var(--line-color, #ddd);
+  border-right: 4px solid var(--line-color, #ddd);
+  border-top-right-radius: 20px; /* Smooth Curve */
+  
+  opacity: 0.3;
+  box-sizing: border-box;
+}
+
+/* --- BRANCH COLUMNS --- */
+.branch-column {
+  flex: 1;
+  position: relative;
+}
+
+.branch-spacer {
+  height: 30px;
+  width: 100%;
+}
+
+.branch-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--line-color, var(--text-muted));
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+/* Line positioning inside branches */
+.branch-column .thermometer-line {
+  top: 0;
+  bottom: 20px;
+  position: absolute;
+}
+.ashmont-col .thermometer-line { left: 30px; }
+.braintree-col .thermometer-line { left: 50%; margin-left: -2px; }
+
+/* --- MAP MARKERS & STOPS --- */
+.map-stop-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  z-index: 1;
+}
+
+.map-marker-area {
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.stop-dot {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 3px solid var(--line-color, #999);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.map-stop-name {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+  padding-left: 10px;
+}
+
+.train-marker {
+  position: absolute;
+  left: 35px;
+  background: white;
+  border: 2px solid var(--line-color);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+  transition: top 0.3s ease;
+}
+
+.train-marker.moving {
+  border-style: dashed; 
+}
+
+/* --- BRANCH OVERRIDES --- */
+.ashmont-col .map-marker-area {
+  justify-content: flex-start;
+  padding-left: 24px;
+}
+.ashmont-col .train-marker { left: 35px; }
+
+.braintree-col .map-marker-area { justify-content: center; width: 100%; }
+.braintree-col .map-stop-row { flex-direction: column; text-align: center; }
+.braintree-col .map-stop-name { padding-left: 0; font-size: 0.8rem; }
+.braintree-col .train-marker { left: 50%; margin-left: 8px; }
