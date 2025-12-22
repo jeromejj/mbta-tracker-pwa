@@ -162,6 +162,72 @@ select {
   filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); /* Golden glow */
 }
 
+/* --- FAVORITES SECTION --- */
+.favorites-container {
+  margin-bottom: 20px;
+}
+
+.favorites-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #888;
+  margin-bottom: 8px;
+  margin-left: 5px;
+  letter-spacing: 0.5px;
+}
+
+.favorites-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 5px; /* Space for scrollbar */
+  -webkit-overflow-scrolling: touch;
+  
+  /* Layout constraints */
+  width: 100%;
+  min-width: 0;
+}
+
+.fav-chip {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevents squishing */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.1s active;
+}
+
+.fav-chip:active {
+  transform: scale(0.95);
+}
+
+.fav-route-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--chip-color, #333);
+}
+
+/* --- STAR BUTTON --- */
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #ffb700; /* Gold */
+  cursor: pointer;
+  padding: 0 0 0 10px; /* Left padding only */
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .no-data {
   text-align: center;
   color: #999;

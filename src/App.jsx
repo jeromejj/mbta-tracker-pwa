@@ -9,7 +9,51 @@ const SUBWAY_FILTERS = [
   '741', '742', '743', '751', '749' // Silver Line
 ];
 
-// --- CUSTOM HOOK ---
+// --- HOOK: Manage Favorites (LocalStorage) ---
+const useFavorites = () => {
+  const [favorites, setFavorites] = useState([]);
+
+  // Load from local storage on startup
+  useEffect(() => {
+    const saved = localStorage.getItem('mbta_favorites');
+    if (saved) {
+      setFavorites(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save to local storage whenever favorites change
+  const toggleFavorite = (stop, route) => {
+    let newFavorites;
+    const exists = favorites.find(f => f.stopId === stop.id);
+
+    if (exists) {
+      // Remove
+      newFavorites = favorites.filter(f => f.stopId !== stop.id);
+    } else {
+      // Add
+      newFavorites = [
+        ...favorites, 
+        { 
+          stopId: stop.id, 
+          stopName: stop.attributes.name, 
+          routeId: route.id,
+          routeName: route.attributes.long_name || route.id 
+        }
+      ];
+    }
+    
+    setFavorites(newFavorites);
+    localStorage.setItem('mbta_favorites', JSON.stringify(newFavorites));
+  };
+
+  const isFavorite = (stopId) => {
+    return favorites.some(f => f.stopId === stopId);
+  };
+
+  return { favorites, toggleFavorite, isFavorite };
+};
+
+// --- HOOK: MBTA Data (Existing) ---
 const useMbtaData = () => {
   const [routes, setRoutes] = useState([]);
   const [stops, setStops] = useState([]);
@@ -17,16 +61,13 @@ const useMbtaData = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Helper: Normalize names to ensure "Heath Street" matches "Heath St"
   const normalizeName = (name) => {
     if (!name) return "";
     return name.toLowerCase().replace("street", "st").replace(/\s+/g, '').trim();
   };
 
-  // Helper: Check if train is "New" (Red Line 1900 series)
   const isNewTrain = (routeId, label) => {
     if (routeId !== 'Red' || !label) return false;
-    // Label can be "1900" or "1900-1901"
     const carNumber = parseInt(label.split('-')[0], 10);
     return !isNaN(carNumber) && carNumber >= 1900;
   };
@@ -56,42 +97,38 @@ const useMbtaData = () => {
       const response = await fetch(`https://api-v3.mbta.com/stops?filter[route]=${routeId}`);
       const json = await response.json();
       setStops(json.data);
+      return json.data; // Return stops so we can use them immediately in the click handler
     } catch (err) {
       setError("Could not load stops.");
+      return [];
     } finally {
       setLoading(false);
     }
   };
 
-  // 3. Fetch Predictions (UPDATED)
-  const fetchPredictions = async (routeId, stopId) => {
+  // 3. Fetch Predictions
+  const fetchPredictions = async (routeId, stopId, currentStopsList = stops) => {
     try {
-      const currentStop = stops.find(s => s.id === stopId);
+      // Robustness: Use passed stops list if state isn't updated yet
+      const currentStop = currentStopsList.find(s => s.id === stopId);
       const currentStopNameNorm = currentStop ? normalizeName(currentStop.attributes.name) : "";
 
-      // UPDATE: Added "vehicle" to include
       const response = await fetch(
         `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip,vehicle`
       );
       const json = await response.json();
       const now = new Date();
       
-      // 3a. Build Maps for Trip (Headsign) and Vehicle (Label/Number)
       const tripMap = {};
       const vehicleMap = {};
       
       if (json.included) {
         json.included.forEach(item => {
-          if (item.type === 'trip') {
-            tripMap[item.id] = item.attributes.headsign;
-          }
-          if (item.type === 'vehicle') {
-            vehicleMap[item.id] = item.attributes.label; // e.g., "1900"
-          }
+          if (item.type === 'trip') tripMap[item.id] = item.attributes.headsign;
+          if (item.type === 'vehicle') vehicleMap[item.id] = item.attributes.label;
         });
       }
 
-      // 3b. Group predictions
       const groups = {};
 
       json.data.forEach((pred) => {
@@ -105,16 +142,12 @@ const useMbtaData = () => {
           const vehicleId = pred.relationships?.vehicle?.data?.id;
           
           let headsign = tripMap[tripId] || pred.attributes.headsign || "Train";
-          let carLabel = vehicleMap[vehicleId]; // The car number (e.g. 1905)
+          let carLabel = vehicleMap[vehicleId];
 
-          // Fix Green Line names
           if (headsign === "Green Line D") headsign = "Riverside"; 
           if (headsign === "Green Line E") headsign = "Heath St";
 
-          // Terminal Filter
-          if (normalizeName(headsign) === currentStopNameNorm) {
-            return; 
-          }
+          if (normalizeName(headsign) === currentStopNameNorm) return; 
 
           if (!groups[headsign]) {
             groups[headsign] = {
@@ -128,17 +161,15 @@ const useMbtaData = () => {
             id: pred.id,
             minutes: minutes < 1 ? "Now" : `${minutes} min`,
             status: pred.attributes.status,
-            isNew: isNewTrain(routeId, carLabel) // Check if new train
+            isNew: isNewTrain(routeId, carLabel)
           });
         }
       });
 
-      // 3c. Format and Sort
       const finalGroups = Object.values(groups)
         .map(group => ({
           ...group,
-          trains: group.trains
-            .sort((a, b) => (a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)))
+          trains: group.trains.sort((a, b) => (a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)))
         }))
         .sort((a, b) => a.directionId - b.directionId || a.name.localeCompare(b.name));
 
@@ -152,22 +183,21 @@ const useMbtaData = () => {
   return { routes, stops, predictionGroups, fetchStops, fetchPredictions, loading };
 };
 
-// --- HELPER: Get Official MBTA Colors ---
+// --- HELPER: Colors ---
 const getLineColor = (routeId) => {
   if (!routeId) return '#003da5'; 
   const id = routeId.toLowerCase();
-  
   if (id.includes('red') || id === 'mattapan') return '#da291c';
   if (id.includes('orange')) return '#ed8b00';
   if (id.includes('blue')) return '#003da5';
   if (id.includes('green')) return '#00843d';
   if (id.includes('74') || id.includes('75')) return '#7c878e'; 
-  
   return '#003da5';
 };
 
 function App() {
   const { routes, stops, predictionGroups, fetchStops, fetchPredictions, loading } = useMbtaData();
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
   
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
@@ -197,6 +227,27 @@ function App() {
     setSelectedStop(stopObj);
   };
 
+  // --- NEW: Handle click on a Favorite Chip ---
+  const handleFavoriteClick = async (fav) => {
+    // 1. Find and set the route object
+    const routeObj = routes.find(r => r.id === fav.routeId);
+    if (!routeObj) return;
+    setSelectedRoute(routeObj);
+
+    // 2. Fetch stops for this route immediately
+    // Note: We need the list of stops *now* to find the stop object, 
+    // we can't wait for the state to update.
+    const fetchedStops = await fetchStops(fav.routeId);
+
+    // 3. Find and set the stop object
+    const stopObj = fetchedStops.find(s => s.id === fav.stopId);
+    if (stopObj) {
+      setSelectedStop(stopObj);
+      // 4. Fetch predictions immediately
+      fetchPredictions(fav.routeId, fav.stopId, fetchedStops);
+    }
+  };
+
   const lineColor = getLineColor(selectedRoute?.id);
 
   return (
@@ -204,6 +255,26 @@ function App() {
       <header><h1>Boston T Tracker</h1></header>
 
       <main>
+        {/* --- SECTION: FAVORITES BAR --- */}
+        {favorites.length > 0 && (
+          <div className="favorites-container">
+            <div className="favorites-label">QUICK ACCESS</div>
+            <div className="favorites-list">
+              {favorites.map(fav => (
+                <button 
+                  key={fav.stopId} 
+                  className="fav-chip"
+                  onClick={() => handleFavoriteClick(fav)}
+                  style={{ '--chip-color': getLineColor(fav.routeId) }}
+                >
+                  <span className="fav-route-dot"></span>
+                  {fav.stopName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="selector-group">
           <label>Select Line</label>
           <select onChange={handleRouteSelect} value={selectedRoute?.id || ""}>
@@ -232,7 +303,16 @@ function App() {
             style={{ '--line-color': lineColor }} 
           >
             <div className="predictions-header">
-              <h2>{selectedStop.attributes.name}</h2>
+              <h2>
+                {selectedStop.attributes.name}
+                {/* --- NEW: STAR BUTTON --- */}
+                <button 
+                  className="star-btn"
+                  onClick={() => toggleFavorite(selectedStop, selectedRoute)}
+                >
+                  {isFavorite(selectedStop.id) ? "★" : "☆"}
+                </button>
+              </h2>
               <div style={{ fontSize: "0.8rem", color: "#888" }}>{loading ? "..." : "Live"}</div>
             </div>
 
@@ -248,7 +328,6 @@ function App() {
                         <div key={t.id} className="train-pill">
                           <span className="time">
                             {t.minutes}
-                            {/* NEW TRAIN INDICATOR */}
                             {t.isNew && <span className="new-badge">✨</span>}
                           </span>
                         </div>
