@@ -1,35 +1,34 @@
 /* --- 1. THE FOUNDATION (Nuclear Reset) --- */
-/* This forces every single element to respect padding inside its width */
 html {
-  box-sizing: border-box;
+  box-sizing: border-box; 
+  width: 100%; 
+  overflow-x: hidden;
 }
+
 *, *:before, *:after {
   box-sizing: inherit;
 }
 
-html, body {
+body {
   margin: 0;
   padding: 0;
-  /* HARD LIMIT: Force page to never exceed device width */
-  width: 100vw; 
+  width: 100%;
   max-width: 100%;
-  overflow-x: hidden; /* Cut off anything that tries to escape */
   
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: #f4f4f9;
   color: #333;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* --- 2. MAIN CONTAINER --- */
 .app-container {
-  /* Use 'auto' instead of '100%' so padding is subtracted automatically */
-  width: auto; 
+  width: 100%; 
   max-width: 600px; /* Cap width on desktop */
-  
-  margin: 0 auto; /* Center on desktop */
-  padding: 15px;  /* The padding that was causing issues */
-  
-  /* Create a hard wall so children can't stretch this container */
+  margin: 0 auto; 
+  padding: 15px; 
+  /* Space for bottom nav */
+  padding-bottom: 90px;
   overflow: hidden; 
 }
 
@@ -40,25 +39,20 @@ header h1 {
   margin-bottom: 20px;
 }
 
-/* --- 3. WHITE CARDS (Selectors & Destinations) --- */
-/* Shared style for all white boxes */
+/* --- 3. WHITE CARDS --- */
 .selector-group, 
-.destination-card {
+.destination-card,
+.thermometer,
+.direction-toggle {
   background: white;
   padding: 15px;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   margin-bottom: 20px;
-  
-  /* CRITICAL CHANGE: */
-  /* Do NOT use width: 100% here. Let it fill naturally. */
   width: auto; 
-  
-  /* Stop the scrolling list from stretching the card */
   min-width: 0; 
 }
 
-/* Special border for destination card */
 .destination-card {
   border-left: 6px solid var(--line-color, #003da5);
 }
@@ -74,20 +68,14 @@ label {
 }
 
 select {
-  /* It is safe to use 100% here because the parent padding protects it */
-  width: 100%; 
+  width: 100%;
   padding: 12px;
   font-size: 16px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  background-color: white;
-  color: #333; /* Force black text */
-  
-  /* Fix for text overflowing */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  
+  background-color: #ffffff !important;
+  color: #000000 !important; 
+  -webkit-text-fill-color: #000000 !important; 
   appearance: none; 
 }
 
@@ -103,7 +91,6 @@ select {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  /* Ensure this list doesn't force width */
   width: auto; 
 }
 
@@ -115,77 +102,56 @@ select {
   padding-bottom: 8px;
 }
 
-/* --- 6. HORIZONTAL SCROLL AREA (The Swipe Zone) --- */
+/* --- 6. SCROLLING PILLS --- */
 .train-row-container {
   display: flex;
   gap: 10px;
-  
-  /* Force it to stay within the card */
   width: 100%; 
-  
-  /* Handle Overflow */
   overflow-x: auto; 
-  overflow-y: hidden;
-  
-  /* Scroll Snap */
-  -webkit-overflow-scrolling: touch; 
+  min-width: 0; 
   padding-bottom: 5px;
+  -webkit-overflow-scrolling: touch; 
 }
 
 .train-pill {
-  /* Keep your dynamic colors */
   background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
   border: 1px solid var(--line-color, #003da5);
   color: var(--line-color, #003da5);
   
-  /* --- SIZING FIXES --- */
-  padding: 10px 16px;  /* Added 16px padding on sides so text isn't cramped */
-  min-width: 100px;    /* Increased from 80px to 100px to fit the star */
+  padding: 10px 16px;
+  min-width: 100px;
   
-  /* --- LAYOUT FIXES --- */
-  white-space: nowrap; /* Forces "12 min ✨" to stay on one line (Critical) */
-  display: flex;       /* Use Flexbox to center the text and star perfectly */
-  justify-content: center;
-  align-items: center;
-  
-  /* Standard styling */
   border-radius: 8px;
   font-weight: 700;
   font-size: 1.2rem;
-  flex-shrink: 0;      /* Prevents it from squishing in the scroll list */
+  
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0; 
 }
 
 .new-badge {
   margin-left: 6px;
   font-size: 0.9em;
-  vertical-align: middle;
-  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); /* Golden glow */
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
 }
 
-/* --- FAVORITES SECTION --- */
-.favorites-container {
-  margin-bottom: 20px;
+.no-data, .no-selection-msg {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  margin-top: 20px;
 }
 
-.favorites-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #888;
-  margin-bottom: 8px;
-  margin-left: 5px;
-  letter-spacing: 0.5px;
-}
-
+/* --- 7. FAVORITES & BOTTOM NAV --- */
 .favorites-list {
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding-bottom: 5px; /* Space for scrollbar */
-  -webkit-overflow-scrolling: touch;
-  
-  /* Layout constraints */
+  padding-bottom: 5px; 
   width: 100%;
-  min-width: 0;
 }
 
 .fav-chip {
@@ -200,13 +166,7 @@ select {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
-  flex-shrink: 0; /* Prevents squishing */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: transform 0.1s active;
-}
-
-.fav-chip:active {
-  transform: scale(0.95);
+  flex-shrink: 0; 
 }
 
 .fav-route-dot {
@@ -216,28 +176,14 @@ select {
   background-color: var(--chip-color, #333);
 }
 
-/* --- STAR BUTTON --- */
 .star-btn {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #ffb700; /* Gold */
+  color: #ffb700;
   cursor: pointer;
-  padding: 0 0 0 10px; /* Left padding only */
+  padding: 0 0 0 10px; 
   line-height: 1;
-  vertical-align: middle;
-}
-
-.no-data {
-  text-align: center;
-  color: #999;
-  font-style: italic;
-  margin-top: 20px;
-}
-
-/* --- BOTTOM NAVIGATION --- */
-.main-content {
-  padding-bottom: 80px; /* Space for the bottom bar */
 }
 
 .bottom-nav {
@@ -250,7 +196,6 @@ select {
   display: flex;
   justify-content: space-around;
   padding: 10px 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
   z-index: 1000;
 }
 
@@ -268,33 +213,12 @@ select {
   color: var(--line-color, #003da5);
 }
 
-.nav-icon {
-  font-size: 1.5rem;
-  margin-bottom: 2px;
-}
+.nav-icon { font-size: 1.5rem; margin-bottom: 2px; }
+.nav-label { font-size: 0.75rem; font-weight: 600; }
 
-.nav-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-}
+/* --- 8. MAP VIEW STYLES --- */
 
-/* --- MAP VIEW (Thermometer) --- */
-/* --- MAP VIEW (Thermometer) --- */
-.no-selection-msg {
-  text-align: center;
-  color: #888;
-  margin-top: 40px;
-  font-style: italic;
-}
-
-.direction-toggle {
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
+/* Direction Toggles */
 .toggle-row {
   display: flex;
   gap: 10px;
@@ -310,7 +234,6 @@ select {
   font-weight: 600;
   color: #666;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .toggle-row button.active {
@@ -319,115 +242,134 @@ select {
   border-color: var(--line-color);
 }
 
+/* Thermometer Base */
 .thermometer {
   position: relative;
-  background: white;
   padding: 20px 10px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
 }
 
-/* The vertical line (Standard) */
 .thermometer-line {
   position: absolute;
-  left: 30px; 
   top: 20px;
   bottom: 20px;
   width: 4px;
-  
-  /* UPDATE: Use the line color, but slightly transparent to not overpower trains */
   background-color: var(--line-color, #ddd);
-  opacity: 0.3; /* Subtle track look */
-  
+  opacity: 0.3;
   border-radius: 2px;
   z-index: 0;
 }
 
-/* --- RED LINE BRANCH MAP --- */
-.red-line-layout {
-  padding: 10px;
+/* Standard Line uses default positioning */
+.main-line {
+  left: 30px;
 }
 
-.trunk-container {
-  position: relative;
-  padding-left: 0; 
-}
+/* --- BRANCH LAYOUT (Red Line) --- */
 
-/* The Trunk Line (Red Line specific) */
-.trunk-line {
-  position: absolute;
-  left: 30px; 
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  
-  /* UPDATE: Dynamic Color */
-  background-color: var(--line-color, #ddd);
-  opacity: 0.3;
-  
-  z-index: 0;
-}
-
+/* Layout Containers */
+.red-line-layout { padding: 10px; }
+.trunk-container { position: relative; }
 .branches-container {
   display: flex;
   justify-content: space-between;
   position: relative;
-  margin-top: -10px; 
+  width: 100%;
 }
 
-.branches-container.top-connector {
-  margin-top: 0;
-  padding-top: 20px; 
+/* Trunk Line */
+.trunk-line {
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+  z-index: 0;
 }
 
-/* UPDATE: The Split Connector Lines (The "Y" shape) */
-.branches-container.top-connector::before {
-  content: '';
+/* 1. The Connector Layer */
+.branch-connector-layer {
   position: absolute;
   top: 0;
-  left: 30px; 
-  right: 50%; 
-  height: 20px;
-  
-  border-left: 4px solid var(--line-color, #ddd); 
-  border-bottom: 4px solid var(--line-color, #ddd);
-  opacity: 0.3; /* Match opacity */
+  left: 0;
+  width: 100%;
+  height: 40px; 
+  pointer-events: none;
+  z-index: 0;
 }
 
-.branches-container.top-connector::after {
-  content: '';
+/* Straight Line (Ashmont) */
+.connector-ashmont {
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+}
+
+/* Rounded Curve (Braintree) */
+.connector-braintree {
   position: absolute;
   top: 0;
-  left: 50%; 
-  right: 30px; 
-  height: 20px;
+  left: 30px;  /* Starts at Trunk X */
+  right: 25%;  /* Ends at Center of Right Column (50% / 2 = 25%) */
+  height: 30px;
   
+  border-top: 4px solid var(--line-color, #ddd);
   border-right: 4px solid var(--line-color, #ddd);
-  border-bottom: 4px solid var(--line-color, #ddd);
-  opacity: 0.3; /* Match opacity */
+  border-top-right-radius: 20px; /* Smooth Curve */
+  
+  opacity: 0.3;
+  box-sizing: border-box; 
 }
 
+/* 2. The Columns */
 .branch-column {
-  flex: 1;
+  flex: 1; /* 50% width each */
   position: relative;
-  padding-top: 10px;
+}
+
+/* Spacer for Connector overlap */
+.branch-spacer {
+  height: 30px; 
+  width: 100%;
 }
 
 .branch-label {
   text-align: center;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--line-color, #888); /* Make label match line too */
+  color: var(--line-color, #888);
   margin-bottom: 5px;
   text-transform: uppercase;
 }
 
+/* Vertical Lines inside Branches */
 .branch-column .thermometer-line {
+  top: 0; 
+  bottom: 20px;
+  width: 4px;
+  background-color: var(--line-color, #ddd);
+  opacity: 0.3;
+  position: absolute;
+}
+
+/* ASHMONT: Force Line Left (30px) */
+.ashmont-col .thermometer-line {
+  left: 30px; 
+  margin-left: 0;
+}
+
+/* BRAINTREE: Center Line */
+.braintree-col .thermometer-line {
   left: 50%;
   margin-left: -2px;
 }
 
+/* --- ROWS & MARKERS --- */
 .map-stop-row {
   position: relative;
   display: flex;
@@ -448,14 +390,20 @@ select {
   width: 12px;
   height: 12px;
   background: white;
-  
-  /* UPDATE: Make the dot border match the line */
   border: 3px solid var(--line-color, #999);
-  
   border-radius: 50%;
   z-index: 1;
 }
 
+.map-stop-name {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+  padding-left: 10px;
+}
+
+/* Train Icon */
 .train-marker {
   position: absolute;
   left: 35px;
@@ -473,47 +421,42 @@ select {
   transition: top 0.3s ease;
 }
 
-.train-marker.moving {
-  border-style: dashed; 
-}
+/* --- BRANCH SPECIFIC OVERRIDES --- */
 
-.map-stop-name {
-  font-size: 0.95rem;
-  color: #333;
-  font-weight: 500;
-  flex: 1;
+/* Ashmont: Align Left */
+.ashmont-col .map-marker-area {
+  justify-content: flex-start;
+  padding-left: 24px; /* (30px line - 6px half-dot) */
+  width: auto;
+}
+.ashmont-col .map-stop-row {
+  flex-direction: row; 
+  text-align: left;
+  padding: 0;
+}
+.ashmont-col .map-stop-name {
   padding-left: 10px;
+  font-size: 0.9rem;
+}
+.ashmont-col .train-marker {
+  left: 35px; /* Fixed position */
+  margin-left: 0;
 }
 
-/* Branch specific overrides */
-.branch-column .map-stop-row {
-  flex-direction: column;
-  text-align: center;
-  padding: 10px 0;
-}
-
-.branch-column .map-marker-area {
+/* Braintree: Center */
+.braintree-col .map-marker-area {
+  justify-content: center;
   width: 100%;
-  margin-bottom: 5px;
 }
-
-.branch-column .map-stop-name {
+.braintree-col .map-stop-row {
+  flex-direction: column; /* Stack dot on top */
+  text-align: center;
+}
+.braintree-col .map-stop-name {
   padding-left: 0;
   font-size: 0.8rem;
-  line-height: 1.2;
 }
-
-.branch-column .train-marker {
+.braintree-col .train-marker {
   left: 50%;
-  margin-left: 8px; 
-}
-
-.trunk-container .train-marker {
-  left: 35px;
-}
-
-.main-line {
-  left: 30px;
-  top: 20px;
-  bottom: 20px;
+  margin-left: 8px; /* Offset right of center line */
 }
