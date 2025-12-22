@@ -1,0 +1,160 @@
+/* --- 1. THE FOUNDATION (Nuclear Reset) --- */
+/* This forces every single element to respect padding inside its width */
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  /* HARD LIMIT: Force page to never exceed device width */
+  width: 100vw; 
+  max-width: 100%;
+  overflow-x: hidden; /* Cut off anything that tries to escape */
+  
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f4f4f9;
+  color: #333;
+}
+
+/* --- 2. MAIN CONTAINER --- */
+.app-container {
+  /* Use 'auto' instead of '100%' so padding is subtracted automatically */
+  width: auto; 
+  max-width: 600px; /* Cap width on desktop */
+  
+  margin: 0 auto; /* Center on desktop */
+  padding: 15px;  /* The padding that was causing issues */
+  
+  /* Create a hard wall so children can't stretch this container */
+  overflow: hidden; 
+}
+
+header h1 {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+/* --- 3. WHITE CARDS (Selectors & Destinations) --- */
+/* Shared style for all white boxes */
+.selector-group, 
+.destination-card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  
+  /* CRITICAL CHANGE: */
+  /* Do NOT use width: 100% here. Let it fill naturally. */
+  width: auto; 
+  
+  /* Stop the scrolling list from stretching the card */
+  min-width: 0; 
+}
+
+/* Special border for destination card */
+.destination-card {
+  border-left: 6px solid var(--line-color, #003da5);
+}
+
+/* --- 4. FORM ELEMENTS --- */
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+select {
+  /* It is safe to use 100% here because the parent padding protects it */
+  width: 100%; 
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: white;
+  color: #333; /* Force black text */
+  
+  /* Fix for text overflowing */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  appearance: none; 
+}
+
+/* --- 5. PREDICTION LISTS --- */
+.predictions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.destinations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  /* Ensure this list doesn't force width */
+  width: auto; 
+}
+
+.destination-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+  color: #444;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+/* --- 6. HORIZONTAL SCROLL AREA (The Swipe Zone) --- */
+.train-row-container {
+  display: flex;
+  gap: 10px;
+  
+  /* Force it to stay within the card */
+  width: 100%; 
+  
+  /* Handle Overflow */
+  overflow-x: auto; 
+  overflow-y: hidden;
+  
+  /* Scroll Snap */
+  -webkit-overflow-scrolling: touch; 
+  padding-bottom: 5px;
+}
+
+.train-pill {
+  /* Colors */
+  background-color: #eef4ff; 
+  background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
+  border: 1px solid var(--line-color, #003da5);
+  color: var(--line-color, #003da5);
+  
+  padding: 10px 0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  
+  /* Sizing */
+  min-width: 80px;
+  text-align: center;
+  
+  /* Prevent shrinking */
+  flex-shrink: 0; 
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  margin-top: 20px;
+}
