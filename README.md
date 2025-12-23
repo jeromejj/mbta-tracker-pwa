@@ -32,10 +32,6 @@ A lightweight, installable Progressive Web App (PWA) for tracking real-time MBTA
 ### Installation
 
 1.  **Clone the repository**
-    ```bash
-    git clone [https://github.com/yourusername/boston-t-tracker.git](https://github.com/yourusername/boston-t-tracker.git)
-    cd boston-t-tracker
-    ```
 
 2.  **Install dependencies**
     ```bash
@@ -46,7 +42,6 @@ A lightweight, installable Progressive Web App (PWA) for tracking real-time MBTA
     ```bash
     npm run dev
     ```
-    The app will start at `http://localhost:5173`.
 
 ### Testing on Mobile (Local Network)
 To test on your phone while developing:
