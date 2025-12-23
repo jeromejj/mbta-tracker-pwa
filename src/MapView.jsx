@@ -5,6 +5,7 @@ import './MapView.css';
 const RED_LINE_ASHMONT = ['place-shmnl', 'place-fldcr', 'place-smmnl', 'place-asmnl'];
 const RED_LINE_BRAINTREE = ['place-nqncy', 'place-wlsta', 'place-qnctr', 'place-qamnl', 'place-brntn'];
 
+// --- HELPER: MEASURE CONTAINER SIZE ---
 const useContainerSize = () => {
   const ref = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -24,10 +25,11 @@ const useContainerSize = () => {
   return [ref, size];
 };
 
-const MapStopRow = ({ stop, vehicles }) => {
+// --- SUB-COMPONENT: SINGLE STOP ROW ---
+const MapStopRow = ({ stop, vehicles, innerRef }) => {
   const trainsHere = vehicles.filter(v => v.stopId === stop.id);
   return (
-    <div className="map-stop-row">
+    <div className="map-stop-row" ref={innerRef}>
       <div className="map-marker-area">
         <div className="stop-dot"></div>
         {trainsHere.map(train => (
@@ -42,21 +44,54 @@ const MapStopRow = ({ stop, vehicles }) => {
 };
 
 // --- SVG TRACK COMPONENT ---
-const TrackSvg = ({ type }) => {
+const TrackSvg = ({ type, targets }) => {
   const [ref, { width, height }] = useContainerSize();
+  const [targetsY, setTargetsY] = useState({ ashmont: 0, braintree: 0 });
+
+  // Measure specific terminal positions for Red Line branches
+  useEffect(() => {
+    if (!targets || !ref.current) return;
+
+    const measureTargets = () => {
+      const containerRect = ref.current.getBoundingClientRect();
+      const newY = { ashmont: height - 25, braintree: height - 25 }; // Default fallback
+
+      if (targets.ashmont?.current) {
+        const rect = targets.ashmont.current.getBoundingClientRect();
+        // Calculate center of the row relative to SVG container
+        newY.ashmont = (rect.top - containerRect.top) + (rect.height / 2);
+      }
+      if (targets.braintree?.current) {
+        const rect = targets.braintree.current.getBoundingClientRect();
+        newY.braintree = (rect.top - containerRect.top) + (rect.height / 2);
+      }
+      setTargetsY(newY);
+    };
+
+    // Measure immediately and on resize
+    measureTargets();
+    window.addEventListener('resize', measureTargets);
+    // Also use a timeout to catch layout shifts after render
+    const timer = setTimeout(measureTargets, 50);
+    
+    return () => {
+      window.removeEventListener('resize', measureTargets);
+      clearTimeout(timer);
+    };
+  }, [width, height, targets]);
 
   if (width === 0 || height === 0) return <div className="track-svg-layer" ref={ref} />;
 
   // --- GEOMETRY CONFIGURATION ---
-  const STANDARD_AXIS = 30; // Orange/Blue lines stay at 30px
+  const STANDARD_AXIS = 30; 
   
   // RED LINE PERCENTAGES
-  const TRUNK_AXIS = width * 0.40;  // Trunk at 40%
-  const ASHMONT_AXIS = width * 0.20; // Ashmont at 20%
-  const BRAINTREE_AXIS = width * 0.60; // Braintree at 60%
+  const TRUNK_AXIS = width * 0.40;  
+  const ASHMONT_AXIS = width * 0.20; 
+  const BRAINTREE_AXIS = width * 0.60; 
   
-  const PAD = 25;     // Center of first/last dot
-  const SPLIT_H = 45; // Height of curve area
+  const PAD = 25;     
+  const SPLIT_H = 45; 
   const COLOR = "var(--line-color)";
   const STROKE = 4;
   const OPACITY = 0.3;
@@ -80,18 +115,22 @@ const TrackSvg = ({ type }) => {
   else if (type === 'split-outbound') {
     const startX = TRUNK_AXIS;
     
-    // Ashmont: Curve Left (40% -> 20%)
+    // Use Measured Y positions to stop exactly at the station
+    const ashmontEnd = targetsY.ashmont || (height - PAD);
+    const braintreeEnd = targetsY.braintree || (height - PAD);
+
+    // Ashmont Path
     paths.push(`
       M ${startX},0 
       C ${startX},25 ${ASHMONT_AXIS},20 ${ASHMONT_AXIS},${SPLIT_H}
-      L ${ASHMONT_AXIS},${height - PAD}
+      L ${ASHMONT_AXIS},${ashmontEnd}
     `);
     
-    // Braintree: Curve Right (40% -> 60%)
+    // Braintree Path
     paths.push(`
       M ${startX},0 
       C ${startX},25 ${BRAINTREE_AXIS},20 ${BRAINTREE_AXIS},${SPLIT_H}
-      L ${BRAINTREE_AXIS},${height - PAD}
+      L ${BRAINTREE_AXIS},${braintreeEnd}
     `);
   }
   
@@ -99,14 +138,13 @@ const TrackSvg = ({ type }) => {
   else if (type === 'merge-inbound') {
     const endX = TRUNK_AXIS;
     
-    // Ashmont: Curve Right (20% -> 40%)
+    // For inbound, we draw FROM the dots DOWN to the merge point
     paths.push(`
       M ${ASHMONT_AXIS},${PAD}
       L ${ASHMONT_AXIS},${height - SPLIT_H}
       C ${ASHMONT_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
     `);
     
-    // Braintree: Curve Left (60% -> 40%)
     paths.push(`
       M ${BRAINTREE_AXIS},${PAD}
       L ${BRAINTREE_AXIS},${height - SPLIT_H}
@@ -133,6 +171,10 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
   if (!route) return <div className="no-selection-msg">Please select a line above</div>;
 
   const isRedLine = route.id === 'Red';
+  
+  // Refs to track the physical location of the last station in each branch
+  const ashmontLastRef = useRef(null);
+  const braintreeLastRef = useRef(null);
 
   const renderRedLine = () => {
     const trunkStops = [];
@@ -179,14 +221,36 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
               {orderedTrunk.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
             </div>
             <div className="branches-container outbound-split">
-              <TrackSvg type="split-outbound" />
+              {/* Pass the refs to the SVG so it knows where to stop drawing */}
+              <TrackSvg 
+                type="split-outbound" 
+                targets={{ ashmont: ashmontLastRef, braintree: braintreeLastRef }} 
+              />
+              
               <div className="branch-column ashmont-col">
                 <div className="branch-stop-spacer" style={{ height: 45 }}></div>
-                {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                {orderedAshmont.map((stop, i) => (
+                  <MapStopRow 
+                    key={stop.id} 
+                    stop={stop} 
+                    vehicles={vehicles}
+                    // Attach Ref to LAST station only
+                    innerRef={i === orderedAshmont.length - 1 ? ashmontLastRef : null}
+                  />
+                ))}
               </div>
+              
               <div className="branch-column braintree-col">
                 <div className="branch-stop-spacer" style={{ height: 45 }}></div>
-                {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                {orderedBraintree.map((stop, i) => (
+                  <MapStopRow 
+                    key={stop.id} 
+                    stop={stop} 
+                    vehicles={vehicles}
+                    // Attach Ref to LAST station only
+                    innerRef={i === orderedBraintree.length - 1 ? braintreeLastRef : null}
+                  />
+                ))}
               </div>
             </div>
           </>
