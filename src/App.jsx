@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import MapView from './MapView'; // <--- IMPORT THE NEW FILE
+import MapView from './MapView'; 
 import './App.css';
 
 // --- CONFIGURATION ---
@@ -278,6 +278,13 @@ function App() {
     }
   };
 
+  // --- NEW: Handle Station Click on Map ---
+  const handleMapStationClick = (stop) => {
+    setSelectedStop(stop);
+    setCurrentTab('list');
+    // NOTE: The useEffect above will detect the state change and fetch predictions automatically.
+  };
+
   const lineColor = getLineColor(selectedRoute?.id);
 
   return (
@@ -372,6 +379,7 @@ function App() {
             vehicles={vehicles}
             directionId={mapDirection}
             onDirectionChange={setMapDirection}
+            onStationSelect={handleMapStationClick} // <--- Pass the new handler
           />
         )}
       </main>

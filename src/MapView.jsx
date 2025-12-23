@@ -25,10 +25,15 @@ const useContainerSize = () => {
   return [ref, size];
 };
 
-const MapStopRow = ({ stop, vehicles, innerRef }) => {
+// --- UPDATED: Clickable Row ---
+const MapStopRow = ({ stop, vehicles, innerRef, onStationSelect }) => {
   const trainsHere = vehicles.filter(v => v.stopId === stop.id);
   return (
-    <div className="map-stop-row" ref={innerRef}>
+    <div 
+      className="map-stop-row" 
+      ref={innerRef}
+      onClick={() => onStationSelect && onStationSelect(stop)} // <--- CLICK HANDLER
+    >
       <div className="map-marker-area">
         <div className="stop-dot"></div>
         {trainsHere.map(train => (
@@ -47,13 +52,12 @@ const TrackSvg = ({ type, targets }) => {
   const [ref, { width, height }] = useContainerSize();
   const [targetsY, setTargetsY] = useState({ ashmont: 0, braintree: 0 });
 
-  // Measure specific terminal positions for Red Line branches
   useEffect(() => {
     if (!targets || !ref.current) return;
 
     const measureTargets = () => {
       const containerRect = ref.current.getBoundingClientRect();
-      const newY = { ashmont: height - 25, braintree: height - 25 };
+      const newY = { ashmont: height - 25, braintree: height - 25 }; 
 
       if (targets.ashmont?.current) {
         const rect = targets.ashmont.current.getBoundingClientRect();
@@ -80,8 +84,6 @@ const TrackSvg = ({ type, targets }) => {
 
   // --- GEOMETRY CONFIGURATION ---
   const STANDARD_AXIS = 30; 
-  
-  // RED LINE PERCENTAGES
   const TRUNK_AXIS = width * 0.40;  
   const ASHMONT_AXIS = width * 0.20; 
   const BRAINTREE_AXIS = width * 0.60; 
@@ -94,52 +96,38 @@ const TrackSvg = ({ type, targets }) => {
 
   let paths = [];
 
-  // 1. STANDARD LINES
   if (type === 'standard') {
     paths.push(`M ${STANDARD_AXIS},${PAD} L ${STANDARD_AXIS},${height - PAD}`);
   } 
-  
-  // 2. RED LINE TRUNK (40%)
   else if (type === 'trunk-outbound') {
     paths.push(`M ${TRUNK_AXIS},${PAD} L ${TRUNK_AXIS},${height}`);
   }
   else if (type === 'trunk-inbound') {
     paths.push(`M ${TRUNK_AXIS},0 L ${TRUNK_AXIS},${height - PAD}`);
   }
-  
-  // 3. RED LINE SPLIT (Outbound)
   else if (type === 'split-outbound') {
     const startX = TRUNK_AXIS;
     const ashmontEnd = targetsY.ashmont || (height - PAD);
     const braintreeEnd = targetsY.braintree || (height - PAD);
 
-    // Ashmont Path
     paths.push(`
       M ${startX},0 
       C ${startX},25 ${ASHMONT_AXIS},20 ${ASHMONT_AXIS},${SPLIT_H}
       L ${ASHMONT_AXIS},${ashmontEnd}
     `);
-    
-    // Braintree Path
     paths.push(`
       M ${startX},0 
       C ${startX},25 ${BRAINTREE_AXIS},20 ${BRAINTREE_AXIS},${SPLIT_H}
       L ${BRAINTREE_AXIS},${braintreeEnd}
     `);
   }
-  
-  // 4. RED LINE MERGE (Inbound)
   else if (type === 'merge-inbound') {
     const endX = TRUNK_AXIS;
-    
-    // Ashmont: Curve Right (20% -> 40%)
     paths.push(`
       M ${ASHMONT_AXIS},${PAD}
       L ${ASHMONT_AXIS},${height - SPLIT_H}
       C ${ASHMONT_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
     `);
-    
-    // Braintree: Curve Left (60% -> 40%)
     paths.push(`
       M ${BRAINTREE_AXIS},${PAD}
       L ${BRAINTREE_AXIS},${height - SPLIT_H}
@@ -162,7 +150,8 @@ const TrackSvg = ({ type, targets }) => {
   );
 };
 
-const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => {
+// --- MAIN MAP VIEW ---
+const MapView = ({ route, stops, vehicles, onDirectionChange, directionId, onStationSelect }) => {
   if (!route) return <div className="no-selection-msg">Please select a line above</div>;
 
   const isRedLine = route.id === 'Red';
@@ -193,17 +182,32 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
             <div className="branches-container inbound-merge">
               <TrackSvg type="merge-inbound" />
               <div className="branch-column ashmont-col">
-                {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                {orderedAshmont.map(stop => (
+                  <MapStopRow 
+                    key={stop.id} stop={stop} vehicles={vehicles} 
+                    onStationSelect={onStationSelect} // <--- Pass down
+                  />
+                ))}
                 <div className="branch-stop-spacer" style={{ height: 45 }}></div>
               </div>
               <div className="branch-column braintree-col">
-                {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                {orderedBraintree.map(stop => (
+                  <MapStopRow 
+                    key={stop.id} stop={stop} vehicles={vehicles} 
+                    onStationSelect={onStationSelect} // <--- Pass down
+                  />
+                ))}
                 <div className="branch-stop-spacer" style={{ height: 45 }}></div>
               </div>
             </div>
             <div className="trunk-container">
               <TrackSvg type="trunk-inbound" />
-              {orderedTrunk.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+              {orderedTrunk.map(stop => (
+                <MapStopRow 
+                  key={stop.id} stop={stop} vehicles={vehicles} 
+                  onStationSelect={onStationSelect} // <--- Pass down
+                />
+              ))}
             </div>
           </>
         )}
@@ -212,7 +216,12 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
           <>
             <div className="trunk-container">
               <TrackSvg type="trunk-outbound" />
-              {orderedTrunk.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+              {orderedTrunk.map(stop => (
+                <MapStopRow 
+                  key={stop.id} stop={stop} vehicles={vehicles} 
+                  onStationSelect={onStationSelect} // <--- Pass down
+                />
+              ))}
             </div>
             <div className="branches-container outbound-split">
               <TrackSvg 
@@ -228,6 +237,7 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
                     stop={stop} 
                     vehicles={vehicles}
                     innerRef={i === orderedAshmont.length - 1 ? ashmontLastRef : null}
+                    onStationSelect={onStationSelect} // <--- Pass down
                   />
                 ))}
               </div>
@@ -240,6 +250,7 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
                     stop={stop} 
                     vehicles={vehicles}
                     innerRef={i === orderedBraintree.length - 1 ? braintreeLastRef : null}
+                    onStationSelect={onStationSelect} // <--- Pass down
                   />
                 ))}
               </div>
@@ -255,7 +266,12 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
     return (
       <div className="thermometer">
         <TrackSvg type="standard" />
-        {displayStops.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+        {displayStops.map(stop => (
+          <MapStopRow 
+            key={stop.id} stop={stop} vehicles={vehicles} 
+            onStationSelect={onStationSelect} // <--- Pass down
+          />
+        ))}
       </div>
     );
   };
