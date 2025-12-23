@@ -61,9 +61,10 @@ header h1 {
 /* =========================================
    3. SHARED CONTAINERS
    ========================================= */
+/* Wrappers for content blocks */
 .selector-group,
-.favorites-container,
-.predictions-container {
+.favorites-container {
+  /* REMOVED .predictions-container from this list */
   background: var(--bg-card);
   padding: 15px;
   border-radius: var(--radius-card);
@@ -71,6 +72,11 @@ header h1 {
   margin-bottom: 20px;
   width: auto;
   min-width: 0;
+}
+
+/* Add this to handle layout only */
+.predictions-container {
+  margin-bottom: 20px;
 }
 
 /* =========================================
