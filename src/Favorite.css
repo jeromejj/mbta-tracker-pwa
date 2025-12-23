@@ -62,8 +62,9 @@
 
 /* --- FAVORITES TAB LAYOUT --- */
 .sticky-header {
+  position: -webkit-sticky; /* For Safari compatibility */
   position: sticky;
-  top: 0;
+  top: 0; /* Sticks to the very top of the viewport */
   z-index: 100;
 
   border-radius: var(--radius-card);
