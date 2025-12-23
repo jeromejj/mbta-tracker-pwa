@@ -54,16 +54,6 @@
 /* --- COLUMNS --- */
 .branch-column { flex: 1; position: relative; }
 
-.branch-label {
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--line-color, #888);
-  margin-bottom: 5px;
-  text-transform: uppercase;
-  padding-top: 10px;
-}
-
 /* --- ROWS & MARKERS --- */
 .map-stop-row {
   position: relative;

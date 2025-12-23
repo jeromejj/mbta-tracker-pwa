@@ -199,11 +199,11 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
             <div className="branches-container inbound-merge">
               <TrackSvg type="merge-inbound" />
               <div className="branch-column ashmont-col">
-                <div className="branch-label">Ashmont</div>
+                
                 {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
               </div>
               <div className="branch-column braintree-col">
-                <div className="branch-label">Braintree</div>
+                
                 {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
               </div>
             </div>
