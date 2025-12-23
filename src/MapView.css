@@ -1,9 +1,9 @@
 /* =========================================
-   MAP VIEW (SVG-ONLY)
+   MAP VIEW (PERCENTAGE LAYOUT)
    ========================================= */
 
 .map-container {
-  --track-axis: 30px;        
+  --track-axis: 30px; /* Standard Line Fixed Axis */
   --row-height: 50px;
 }
 
@@ -25,15 +25,12 @@
 /* --- LAYOUT --- */
 .thermometer {
   position: relative;
-  /* NO PADDING: Ensures 0px is truly the edge, fixing misalignment */
-  padding: 0;
   margin-top: 20px;
-  
-  /* Restored card styles */
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   overflow: hidden; 
+  padding: 0;
 }
 
 .red-line-layout { padding-bottom: 10px; }
@@ -58,39 +55,78 @@
 .branch-column { flex: 1; position: relative; }
 
 .branch-label {
-  text-align: center; font-size: 0.75rem; font-weight: 700;
-  color: var(--line-color, #888); margin-bottom: 5px;
-  text-transform: uppercase; padding-top: 10px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--line-color, #888);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  padding-top: 10px;
 }
 
 /* --- ROWS & MARKERS --- */
 .map-stop-row {
-  position: relative; display: flex; align-items: center;
-  min-height: var(--row-height); z-index: 1;
+  position: relative;
+  display: flex;
+  align-items: center; /* Vertical Center */
+  min-height: var(--row-height);
+  z-index: 1;
 }
 
-/* LEFT MARKER AREA (Ashmont / Trunk / Standard) */
+/* 1. STANDARD LINE (Orange/Blue/Green) */
+/* Fixed Layout: Line at 30px */
 .map-marker-area {
-  /* 60px box. Flex center puts dot at exactly 30px. */
-  width: calc(var(--track-axis) * 2);
+  width: calc(var(--track-axis) * 2); /* 60px */
   display: flex; justify-content: center; align-items: center;
   position: relative; flex-shrink: 0;
 }
-
-/* RIGHT MARKER AREA (Braintree) */
-.braintree-col .map-marker-area { 
-  width: 100%; justify-content: center; 
-}
-.braintree-col .map-stop-row { 
-  flex-direction: column; text-align: center; 
-}
-.braintree-col .map-stop-name { 
-  padding-left: 0; font-size: 0.8rem; margin-top: 5px; 
-}
-
 .map-stop-name {
   font-size: 0.95rem; color: #333; font-weight: 500;
   flex: 1; padding-left: 0; padding-right: 10px;
+}
+
+/* 2. RED LINE OVERRIDES (Percentage Layout) */
+
+/* TRUNK: 40% Position */
+/* We switch marker to absolute so it doesn't push text */
+.trunk-container .map-marker-area {
+  position: absolute;
+  left: 40%;
+  transform: translateX(-50%);
+  width: 40px; /* Small fixed width for dot area */
+}
+.trunk-container .map-stop-name {
+  padding-left: calc(40% + 20px); /* Text starts right of the 40% mark */
+}
+
+/* ASHMONT (Left Col): Target 20% Total */
+/* Column is 50%. 20% total = 40% of column */
+.ashmont-col .map-marker-area {
+  position: absolute;
+  left: 40%; 
+  transform: translateX(-50%);
+  width: 40px;
+}
+.ashmont-col .map-stop-name {
+  padding-left: calc(40% + 20px);
+}
+
+/* BRAINTREE (Right Col): Target 60% Total */
+/* Column starts at 50%. Target is +10%. 10% total = 20% of column */
+.braintree-col .map-marker-area {
+  position: absolute;
+  left: 20%;
+  transform: translateX(-50%);
+  width: 40px;
+}
+.braintree-col .map-stop-name {
+  padding-left: calc(20% + 20px);
+}
+
+/* Ensure no flex conflicts in Red Line mode */
+.red-line-layout .map-stop-row {
+  display: flex;
+  align-items: center;
 }
 
 /* --- DOTS & ICONS --- */
@@ -101,7 +137,8 @@
 }
 
 .train-marker {
-  position: absolute; left: 50%; margin-left: -14px;
+  position: absolute; 
+  left: 50%; margin-left: -14px;
   background: white; border: 2px solid var(--line-color);
   border-radius: 50%; width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
@@ -109,4 +146,3 @@
   z-index: 2; transition: top 0.3s ease;
 }
 .train-marker.moving { border-style: dashed; }
-.braintree-col .train-marker { left: 50%; margin-left: -14px; }

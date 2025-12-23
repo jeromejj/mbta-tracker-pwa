@@ -5,7 +5,6 @@ import './MapView.css';
 const RED_LINE_ASHMONT = ['place-shmnl', 'place-fldcr', 'place-smmnl', 'place-asmnl'];
 const RED_LINE_BRAINTREE = ['place-nqncy', 'place-wlsta', 'place-qnctr', 'place-qamnl', 'place-brntn'];
 
-// --- HELPER: MEASURE CONTAINER SIZE ---
 const useContainerSize = () => {
   const ref = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -42,65 +41,76 @@ const MapStopRow = ({ stop, vehicles }) => {
   );
 };
 
-// --- UNIFIED SVG TRACK COMPONENT ---
+// --- SVG TRACK COMPONENT ---
 const TrackSvg = ({ type }) => {
   const [ref, { width, height }] = useContainerSize();
 
   if (width === 0 || height === 0) return <div className="track-svg-layer" ref={ref} />;
 
-  // GEOMETRY
-  const AXIS = 30;          // Center of left track (pixels)
-  const PAD = 25;           // Center of first/last dot (50px row / 2)
-  const SPLIT_H = 45;       // Height of the split curve
+  // --- GEOMETRY CONFIGURATION ---
+  const STANDARD_AXIS = 30; // Orange/Blue lines stay at 30px
+  
+  // RED LINE PERCENTAGES
+  const TRUNK_AXIS = width * 0.40;  // Trunk at 40%
+  const ASHMONT_AXIS = width * 0.20; // Ashmont at 20%
+  const BRAINTREE_AXIS = width * 0.60; // Braintree at 60%
+  
+  const PAD = 25;     // Center of first/last dot
+  const SPLIT_H = 45; // Height of curve area
   const COLOR = "var(--line-color)";
   const STROKE = 4;
   const OPACITY = 0.3;
 
   let paths = [];
 
-  // --- LOGIC: BUILD PATHS ---
+  // 1. STANDARD LINES
   if (type === 'standard') {
-    // Start at first dot, end at last dot
-    paths.push(`M ${AXIS},${PAD} L ${AXIS},${height - PAD}`);
+    paths.push(`M ${STANDARD_AXIS},${PAD} L ${STANDARD_AXIS},${height - PAD}`);
   } 
   
+  // 2. RED LINE TRUNK (40%)
   else if (type === 'trunk-outbound') {
-    // Start at first dot, go flush to bottom
-    paths.push(`M ${AXIS},${PAD} L ${AXIS},${height}`);
+    paths.push(`M ${TRUNK_AXIS},${PAD} L ${TRUNK_AXIS},${height}`);
   }
-  
   else if (type === 'trunk-inbound') {
-    // Start flush at top, go to last dot
-    paths.push(`M ${AXIS},0 L ${AXIS},${height - PAD}`);
+    paths.push(`M ${TRUNK_AXIS},0 L ${TRUNK_AXIS},${height - PAD}`);
   }
   
+  // 3. RED LINE SPLIT (Outbound)
   else if (type === 'split-outbound') {
-    const braintreeX = width * 0.75; // Center of right column
+    const startX = TRUNK_AXIS;
     
-    // 1. Ashmont: Straight down (Top -> Last Dot)
-    paths.push(`M ${AXIS},0 L ${AXIS},${height - PAD}`);
-    
-    // 2. Braintree: Curve (Top -> Last Dot in Right Column)
-    // Curve ends at SPLIT_H, then straight line down
+    // Ashmont: Curve Left (40% -> 20%)
     paths.push(`
-      M ${AXIS},0 
-      C ${AXIS},25 ${braintreeX},20 ${braintreeX},${SPLIT_H}
-      L ${braintreeX},${height - PAD}
+      M ${startX},0 
+      C ${startX},25 ${ASHMONT_AXIS},20 ${ASHMONT_AXIS},${SPLIT_H}
+      L ${ASHMONT_AXIS},${height - PAD}
+    `);
+    
+    // Braintree: Curve Right (40% -> 60%)
+    paths.push(`
+      M ${startX},0 
+      C ${startX},25 ${BRAINTREE_AXIS},20 ${BRAINTREE_AXIS},${SPLIT_H}
+      L ${BRAINTREE_AXIS},${height - PAD}
     `);
   }
   
+  // 4. RED LINE MERGE (Inbound)
   else if (type === 'merge-inbound') {
-    const braintreeX = width * 0.75;
+    const endX = TRUNK_AXIS;
     
-    // 1. Ashmont: Straight up (Bottom -> First Dot)
-    paths.push(`M ${AXIS},${height} L ${AXIS},${PAD}`);
-    
-    // 2. Braintree: Curve (Bottom -> First Dot in Right Column)
-    // Draw from Dot down to curve start, then curve to bottom
+    // Ashmont: Curve Right (20% -> 40%)
     paths.push(`
-      M ${braintreeX},${PAD}
-      L ${braintreeX},${height - SPLIT_H}
-      C ${braintreeX},${height - 20} ${AXIS},${height - 25} ${AXIS},${height}
+      M ${ASHMONT_AXIS},${PAD}
+      L ${ASHMONT_AXIS},${height - SPLIT_H}
+      C ${ASHMONT_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
+    `);
+    
+    // Braintree: Curve Left (60% -> 40%)
+    paths.push(`
+      M ${BRAINTREE_AXIS},${PAD}
+      L ${BRAINTREE_AXIS},${height - SPLIT_H}
+      C ${BRAINTREE_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
     `);
   }
 
@@ -189,7 +199,6 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
     const displayStops = directionId === 1 ? [...stops].reverse() : stops;
     return (
       <div className="thermometer">
-        {/* Unified SVG for standard lines too */}
         <TrackSvg type="standard" />
         {displayStops.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
       </div>
