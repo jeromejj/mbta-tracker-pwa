@@ -1,108 +1,44 @@
 /* =========================================
-   MAP VIEW (THERMOMETER)
+   MAP VIEW (SVG-ONLY)
    ========================================= */
 
-/* --- CONFIGURATION VARIABLES --- */
 .map-container {
-  /* GEOMETRY SETTINGS */
-  --track-axis: 30px;        /* X-Position of the line */
-  --track-width: 4px;
-  
-  /* Vertical Offsets */
-  --pad-top: 20px;           /* .thermometer padding */
-  --row-center: 25px;        /* Half of min-height (50px) */
-  
-  /* Calculated Terminals */
-  /* Where a standard line starts/stops relative to the white card */
-  --term-std: calc(var(--pad-top) + var(--row-center)); /* 45px */
-  
-  /* Where a branch line starts relative to the Label (Label ~20px + 25px) */
-  --term-label: 45px; 
-  
-  /* Where a branch line starts relative to the Spacer (Spacer 30px) */
-  --term-spacer: 30px;
-
-  /* Line Styling */
-  --track-color: var(--line-color, #ddd);
-  --track-opacity: 0.3;
+  --track-axis: 30px;        
+  --row-height: 50px;
 }
 
 /* --- TOGGLES --- */
-.toggle-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
+.direction-toggle {
+  background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
-
+.toggle-row { display: flex; gap: 10px; margin-top: 10px; }
 .toggle-row button {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid var(--border-light);
-  background: #f9f9f9;
-  border-radius: 8px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  flex: 1; padding: 10px; border: 1px solid #ddd;
+  background: #f9f9f9; border-radius: 8px; font-weight: 600;
+  color: #666; cursor: pointer; transition: all 0.2s ease;
 }
-
 .toggle-row button.active {
-  background: var(--line-color);
-  color: white;
-  border-color: var(--line-color);
+  background: var(--line-color); color: white; border-color: var(--line-color);
 }
 
-/* --- BASE THERMOMETER --- */
+/* --- LAYOUT --- */
 .thermometer {
   position: relative;
-  padding: var(--pad-top) 0; /* 20px 0 */
+  /* NO PADDING: Ensures 0px is truly the edge, fixing misalignment */
+  padding: 0;
+  margin-top: 20px;
+  
+  /* Restored card styles */
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  overflow: hidden; 
 }
 
-/* SHARED LINE STYLES */
-.thermometer-line, .trunk-line {
-  position: absolute;
-  width: var(--track-width);
-  background-color: var(--track-color);
-  opacity: var(--track-opacity);
-  border-radius: 4px;
-  z-index: 0;
-  transform: translateX(-50%); /* Centers line on the coordinate */
-}
-
-/* 1. STANDARD LINE (Orange/Blue/Green) */
-/* Starts at first dot (45px), Ends at last dot (45px) */
-.main-line {
-  left: var(--track-axis);
-  top: var(--term-std);
-  bottom: var(--term-std);
-}
-
-/* --- RED LINE LAYOUT --- */
 .red-line-layout { padding-bottom: 10px; }
 .trunk-container { position: relative; }
 
-/* 2. TRUNK LINE (Alewife <-> JFK) */
-/* Explicitly defined to prevent disappearing */
-.trunk-line {
-  left: var(--track-axis);
-  /* Default fallbacks */
-  top: 0; 
-  bottom: 0;
-}
-
-/* Outbound (Split Down): Top=Terminal (25px), Bottom=Connect (0) */
-.split-down {
-  top: var(--row-center); 
-  bottom: 0;
-}
-
-/* Inbound (Merge Up): Top=Connect (0), Bottom=Terminal (25px) */
-.merge-up {
-  top: 0;
-  bottom: var(--row-center);
-}
-
-/* --- BRANCH LAYOUT --- */
 .branches-container {
   display: flex;
   justify-content: space-between;
@@ -110,133 +46,67 @@
   width: 100%;
 }
 
-/* Branch Connectors */
-.branch-connector-layer {
+/* --- SVG LAYER --- */
+.track-svg-layer {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 40px; 
-  pointer-events: none;
+  top: 0; left: 0; right: 0; bottom: 0;
   z-index: 0;
+  pointer-events: none;
 }
 
-.connector-ashmont {
-  position: absolute;
-  left: var(--track-axis);
-  top: 0;
-  bottom: 0;
-  width: var(--track-width);
-  background-color: var(--track-color);
-  opacity: var(--track-opacity);
-  transform: translateX(-50%);
-}
-
-.connector-braintree {
-  position: absolute;
-  top: 0;
-  left: calc(var(--track-axis) - (var(--track-width) / 2));
-  right: calc(50% - (var(--track-width) / 2));
-  height: 30px;
-  border-top: var(--track-width) solid var(--track-color);
-  border-right: var(--track-width) solid var(--track-color);
-  border-top-right-radius: 20px;
-  opacity: var(--track-opacity);
-  box-sizing: border-box;
-}
-
-/* Branch Columns */
+/* --- COLUMNS --- */
 .branch-column { flex: 1; position: relative; }
-.branch-spacer { height: 30px; width: 100%; }
 
 .branch-label {
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--line-color, var(--text-muted));
-  margin-bottom: 5px;
-  text-transform: uppercase;
+  text-align: center; font-size: 0.75rem; font-weight: 700;
+  color: var(--line-color, #888); margin-bottom: 5px;
+  text-transform: uppercase; padding-top: 10px;
 }
 
-/* 3. BRANCH LINES */
-.branch-column .thermometer-line {
-  position: absolute;
-}
-
-/* OUTBOUND (Down): Starts after Spacer (30px), Ends at Terminal (25px) */
-.outbound-split .branch-column .thermometer-line {
-  top: var(--term-spacer);
-  bottom: var(--row-center);
-}
-
-/* INBOUND (Up): Starts after Label (45px), Ends at Connector (0) */
-.inbound-merge .branch-column .thermometer-line {
-  top: var(--term-label);
-  bottom: 0;
-}
-
-/* Axis Positioning */
-.ashmont-col .thermometer-line { left: var(--track-axis); }
-.braintree-col .thermometer-line { left: 50%; }
-
-/* --- STOP MARKERS --- */
+/* --- ROWS & MARKERS --- */
 .map-stop-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 50px;
-  z-index: 1;
+  position: relative; display: flex; align-items: center;
+  min-height: var(--row-height); z-index: 1;
 }
 
+/* LEFT MARKER AREA (Ashmont / Trunk / Standard) */
 .map-marker-area {
+  /* 60px box. Flex center puts dot at exactly 30px. */
   width: calc(var(--track-axis) * 2);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  flex-shrink: 0;
+  display: flex; justify-content: center; align-items: center;
+  position: relative; flex-shrink: 0;
 }
 
-.stop-dot {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border: 3px solid var(--line-color, #999);
-  border-radius: 50%;
-  z-index: 1;
-  box-sizing: border-box;
+/* RIGHT MARKER AREA (Braintree) */
+.braintree-col .map-marker-area { 
+  width: 100%; justify-content: center; 
+}
+.braintree-col .map-stop-row { 
+  flex-direction: column; text-align: center; 
+}
+.braintree-col .map-stop-name { 
+  padding-left: 0; font-size: 0.8rem; margin-top: 5px; 
 }
 
 .map-stop-name {
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  font-weight: 500;
-  flex: 1;
-  padding-left: 0;
+  font-size: 0.95rem; color: #333; font-weight: 500;
+  flex: 1; padding-left: 0; padding-right: 10px;
 }
 
-/* --- TRAIN ICON --- */
+/* --- DOTS & ICONS --- */
+.stop-dot {
+  width: 12px; height: 12px; background: white;
+  border: 3px solid var(--line-color, #999);
+  border-radius: 50%; z-index: 1; box-sizing: border-box;
+}
+
 .train-marker {
-  position: absolute;
-  left: var(--track-axis);
-  margin-left: -14px;
-  background: white;
-  border: 2px solid var(--line-color);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 2;
-  transition: top 0.3s ease;
+  position: absolute; left: 50%; margin-left: -14px;
+  background: white; border: 2px solid var(--line-color);
+  border-radius: 50%; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2; transition: top 0.3s ease;
 }
 .train-marker.moving { border-style: dashed; }
-
-/* Branch Overrides */
-.braintree-col .map-marker-area { width: 100%; justify-content: center; }
-.braintree-col .map-stop-row { flex-direction: column; text-align: center; }
-.braintree-col .map-stop-name { padding-left: 0; font-size: 0.8rem; margin-top: 5px; }
 .braintree-col .train-marker { left: 50%; margin-left: -14px; }

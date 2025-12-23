@@ -2,97 +2,79 @@
    1. VARIABLES & RESET
    ========================================= */
 :root {
-  /* Colors */
   --bg-app: #f4f4f9;
   --bg-card: #ffffff;
   --text-primary: #333333;
   --text-secondary: #666666;
   --text-muted: #888888;
   --border-light: #dddddd;
-  
-  /* Brand Colors (Fallbacks) */
   --brand-blue: #003da5;
   --brand-gold: #ffb700;
   
-  /* Spacing & Layout */
-  --spacing-sm: 10px;
   --spacing-md: 15px;
   --spacing-lg: 20px;
   --radius-card: 12px;
-  --radius-input: 8px;
-  --nav-height: 80px;
-
-  /* Shadows */
-  --shadow-card: 0 4px 6px rgba(0,0,0,0.05);
-  --shadow-nav: 0 -2px 10px rgba(0,0,0,0.05);
 }
 
 html {
   box-sizing: border-box;
-  width: 100%;
-  overflow-x: hidden;
 }
-
 *, *:before, *:after {
   box-sizing: inherit;
 }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
-  width: 100%;
+  width: 100vw;
   max-width: 100%;
+  overflow-x: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
 }
 
 /* =========================================
-   2. GLOBAL LAYOUT
+   2. MAIN CONTAINER
    ========================================= */
 .app-container {
-  width: 100%;
-  max-width: 600px; /* Desktop cap */
+  width: auto;
+  max-width: 600px;
   margin: 0 auto;
-  padding: var(--spacing-md);
-  padding-bottom: 90px; /* Space for bottom nav */
+  padding: 15px;
+  padding-bottom: 90px; 
   overflow: hidden;
 }
 
 header h1 {
   text-align: center;
   font-size: 1.5rem;
-  margin-top: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  margin-top: 10px;
+  margin-bottom: 20px;
 }
 
-/* Common Utility: Shared White Card Style */
-.card,
-.selector-group,
+/* =========================================
+   3. SHARED CARDS
+   ========================================= */
+/* NOTE: Removed .thermometer from here to prevent padding conflicts */
+.selector-group, 
 .destination-card,
-.thermometer,
-.direction-toggle,
 .favorites-container {
   background: var(--bg-card);
-  padding: var(--spacing-md);
+  padding: 15px;
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
   width: auto;
   min-width: 0;
 }
 
-/*Utility: Center Text/Icons */
-.no-data, .no-selection-msg {
-  text-align: center;
-  color: #999;
-  font-style: italic;
-  margin-top: 20px;
+.destination-card {
+  border-left: 6px solid var(--line-color, #003da5);
 }
 
 /* =========================================
-   3. FORM ELEMENTS
+   4. FORM ELEMENTS
    ========================================= */
 label {
   display: block;
@@ -108,61 +90,17 @@ select {
   padding: 12px;
   font-size: 16px;
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-input);
-  
-  /* Critical: Force text visibility on Mobile Dark Mode */
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  border-radius: 8px;
+  background-color: white;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   appearance: none;
 }
 
 /* =========================================
-   4. FEATURE: FAVORITES
-   ========================================= */
-.favorites-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  margin-left: 5px;
-  letter-spacing: 0.5px;
-}
-
-.favorites-list {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 5px;
-  width: 100%;
-  -webkit-overflow-scrolling: touch;
-}
-
-.fav-chip {
-  background: white;
-  border: 1px solid var(--border-light);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.fav-route-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--chip-color, #333);
-}
-
-/* =========================================
-   5. FEATURE: PREDICTIONS (LIST VIEW)
+   5. PREDICTION LIST VIEW
    ========================================= */
 .predictions-header {
   display: flex;
@@ -171,18 +109,11 @@ select {
   margin-bottom: 10px;
 }
 
-.star-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--brand-gold);
-  cursor: pointer;
-  padding: 0 0 0 10px;
-  line-height: 1;
-}
-
-.destination-card {
-  border-left: 6px solid var(--line-color, var(--brand-blue));
+.destinations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: auto;
 }
 
 .destination-card h3 {
@@ -193,29 +124,24 @@ select {
   padding-bottom: 8px;
 }
 
-/* Horizontal Scroll for Time Pills */
 .train-row-container {
   display: flex;
   gap: 10px;
   width: 100%;
   overflow-x: auto;
-  min-width: 0;
   padding-bottom: 5px;
   -webkit-overflow-scrolling: touch;
 }
 
 .train-pill {
-  /* Dynamic Background Mix */
-  background-color: color-mix(in srgb, var(--line-color, var(--brand-blue)), white 90%);
-  border: 1px solid var(--line-color, var(--brand-blue));
-  color: var(--line-color, var(--brand-blue));
-  
+  background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
+  border: 1px solid var(--line-color, #003da5);
+  color: var(--line-color, #003da5);
   padding: 10px 16px;
   min-width: 100px;
   border-radius: 8px;
   font-weight: 700;
   font-size: 1.2rem;
-  
   white-space: nowrap;
   display: flex;
   justify-content: center;
@@ -229,36 +155,44 @@ select {
   filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
 }
 
-/* =========================================
-   6. NAVIGATION (BOTTOM BAR)
-   ========================================= */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-around;
-  padding: 10px 0;
-  box-shadow: var(--shadow-nav);
-  z-index: 1000;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.no-data, .no-selection-msg {
+  text-align: center;
   color: #999;
-  cursor: pointer;
+  font-style: italic;
+  margin-top: 20px;
 }
 
-.nav-item.active {
-  color: var(--line-color, var(--brand-blue));
+/* =========================================
+   6. FAVORITES & NAV
+   ========================================= */
+.favorites-label {
+  font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; margin-left: 5px;
+}
+.favorites-list {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; width: 100%;
+}
+.fav-chip {
+  background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 20px;
+  font-size: 0.9rem; font-weight: 600; color: #333; display: flex; align-items: center;
+  gap: 8px; white-space: nowrap; flex-shrink: 0;
+}
+.fav-route-dot {
+  width: 10px; height: 10px; border-radius: 50%; background-color: var(--chip-color, #333);
+}
+.star-btn {
+  background: none; border: none; font-size: 1.5rem; color: var(--brand-gold); cursor: pointer;
+  padding: 0 0 0 10px; line-height: 1;
 }
 
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; width: 100%; background: white;
+  border-top: 1px solid var(--border-light); display: flex; justify-content: space-around;
+  padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000;
+}
+.nav-item {
+  background: none; border: none; display: flex; flex-direction: column; align-items: center;
+  color: #999; cursor: pointer;
+}
+.nav-item.active { color: var(--line-color, #003da5); }
 .nav-icon { font-size: 1.5rem; margin-bottom: 2px; }
 .nav-label { font-size: 0.75rem; font-weight: 600; }
