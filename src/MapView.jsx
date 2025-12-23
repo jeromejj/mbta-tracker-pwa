@@ -25,7 +25,6 @@ const useContainerSize = () => {
   return [ref, size];
 };
 
-// --- SUB-COMPONENT: SINGLE STOP ROW ---
 const MapStopRow = ({ stop, vehicles, innerRef }) => {
   const trainsHere = vehicles.filter(v => v.stopId === stop.id);
   return (
@@ -54,11 +53,10 @@ const TrackSvg = ({ type, targets }) => {
 
     const measureTargets = () => {
       const containerRect = ref.current.getBoundingClientRect();
-      const newY = { ashmont: height - 25, braintree: height - 25 }; // Default fallback
+      const newY = { ashmont: height - 25, braintree: height - 25 };
 
       if (targets.ashmont?.current) {
         const rect = targets.ashmont.current.getBoundingClientRect();
-        // Calculate center of the row relative to SVG container
         newY.ashmont = (rect.top - containerRect.top) + (rect.height / 2);
       }
       if (targets.braintree?.current) {
@@ -68,10 +66,8 @@ const TrackSvg = ({ type, targets }) => {
       setTargetsY(newY);
     };
 
-    // Measure immediately and on resize
     measureTargets();
     window.addEventListener('resize', measureTargets);
-    // Also use a timeout to catch layout shifts after render
     const timer = setTimeout(measureTargets, 50);
     
     return () => {
@@ -114,8 +110,6 @@ const TrackSvg = ({ type, targets }) => {
   // 3. RED LINE SPLIT (Outbound)
   else if (type === 'split-outbound') {
     const startX = TRUNK_AXIS;
-    
-    // Use Measured Y positions to stop exactly at the station
     const ashmontEnd = targetsY.ashmont || (height - PAD);
     const braintreeEnd = targetsY.braintree || (height - PAD);
 
@@ -138,13 +132,14 @@ const TrackSvg = ({ type, targets }) => {
   else if (type === 'merge-inbound') {
     const endX = TRUNK_AXIS;
     
-    // For inbound, we draw FROM the dots DOWN to the merge point
+    // Ashmont: Curve Right (20% -> 40%)
     paths.push(`
       M ${ASHMONT_AXIS},${PAD}
       L ${ASHMONT_AXIS},${height - SPLIT_H}
       C ${ASHMONT_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
     `);
     
+    // Braintree: Curve Left (60% -> 40%)
     paths.push(`
       M ${BRAINTREE_AXIS},${PAD}
       L ${BRAINTREE_AXIS},${height - SPLIT_H}
@@ -172,7 +167,6 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
 
   const isRedLine = route.id === 'Red';
   
-  // Refs to track the physical location of the last station in each branch
   const ashmontLastRef = useRef(null);
   const braintreeLastRef = useRef(null);
 
@@ -199,12 +193,12 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
             <div className="branches-container inbound-merge">
               <TrackSvg type="merge-inbound" />
               <div className="branch-column ashmont-col">
-                
                 {orderedAshmont.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                <div className="branch-stop-spacer" style={{ height: 45 }}></div>
               </div>
               <div className="branch-column braintree-col">
-                
                 {orderedBraintree.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
+                <div className="branch-stop-spacer" style={{ height: 45 }}></div>
               </div>
             </div>
             <div className="trunk-container">
@@ -221,7 +215,6 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
               {orderedTrunk.map(stop => <MapStopRow key={stop.id} stop={stop} vehicles={vehicles} />)}
             </div>
             <div className="branches-container outbound-split">
-              {/* Pass the refs to the SVG so it knows where to stop drawing */}
               <TrackSvg 
                 type="split-outbound" 
                 targets={{ ashmont: ashmontLastRef, braintree: braintreeLastRef }} 
@@ -234,7 +227,6 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
                     key={stop.id} 
                     stop={stop} 
                     vehicles={vehicles}
-                    // Attach Ref to LAST station only
                     innerRef={i === orderedAshmont.length - 1 ? ashmontLastRef : null}
                   />
                 ))}
@@ -247,7 +239,6 @@ const MapView = ({ route, stops, vehicles, onDirectionChange, directionId }) => 
                     key={stop.id} 
                     stop={stop} 
                     vehicles={vehicles}
-                    // Attach Ref to LAST station only
                     innerRef={i === orderedBraintree.length - 1 ? braintreeLastRef : null}
                   />
                 ))}
