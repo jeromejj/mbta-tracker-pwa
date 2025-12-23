@@ -61,19 +61,49 @@
 }
 
 /* --- FAVORITES TAB LAYOUT --- */
-.sticky-header {
-  position: -webkit-sticky; /* For Safari compatibility */
-  position: sticky;
-  top: 0; /* Sticks to the very top of the viewport */
-  z-index: 100;
 
-  border-radius: var(--radius-card);
+/* The invisible line that detects scrolling */
+.sticky-sentinel {
+  height: 1px;
+  margin-bottom: -1px; /* Overlap slightly so it triggers immediately */
+}
+
+/* The Header Itself */
+.sticky-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 
   margin-bottom: 10px;
   border-bottom: 1px solid #ddd;
   background: var(--bg-card);
   padding: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  /* TRANSITION: Smooth morphing effect */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* DEFAULT STATE: Rounded card */
+  border-radius: var(--radius-card);
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* STUCK STATE: Full Width Bar */
+.sticky-header.stuck {
+  /* Remove corners */
+  border-radius: 0;
+
+  /* Expand to full screen width by canceling parent padding (15px) */
+  margin-left: -15px;
+  margin-right: -15px;
+  padding-left: 30px; /* Add internal padding to keep text aligned */
+  padding-right: 30px;
+
+  /* Stronger shadow for floating effect */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #ccc;
 }
 
 .fav-section {

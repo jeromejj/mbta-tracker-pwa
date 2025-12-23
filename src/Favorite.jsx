@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./Favorite.css";
 
 // --- REUSABLE COMPONENT: PREDICTION CARD ---
-// Exported so App.jsx can use it for the Search view too
 export const PredictionCard = ({
   title,
   groups,
   onStarClick,
   isFav,
   lineColor,
+  extra,
 }) => (
   <div
     className="destination-card"
@@ -23,6 +23,7 @@ export const PredictionCard = ({
           </button>
         )}
       </h2>
+      {extra}
     </div>
 
     <div className="destinations-list">
@@ -64,6 +65,25 @@ const FavoritesTab = ({
   toggleFavorite,
   getLineColor,
 }) => {
+  const [isStuck, setIsStuck] = useState(false);
+  const sentinelRef = useRef(null);
+
+  // Scroll logic to detect when header hits the top
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // If sentinel is NOT visible, it means we've scrolled past it -> Header is stuck
+        setIsStuck(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "-1px 0px 0px 0px" } // Trigger exactly at top
+    );
+
+    if (sentinelRef.current) {
+      observer.observe(sentinelRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
   const scrollToFav = (stopId) => {
     const el = document.getElementById(`fav-${stopId}`);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -85,8 +105,15 @@ const FavoritesTab = ({
 
   return (
     <div className="favorites-view fade-in">
-      {/* 1. Sticky Quick Jump Header */}
-      <div className="favorites-container sticky-header">
+      {/* 1. Invisible Sentinel (Detects scroll position) */}
+      <div ref={sentinelRef} className="sticky-sentinel" />
+
+      {/* 2. Sticky Header with dynamic 'stuck' class */}
+      <div
+        className={`favorites-container sticky-header ${
+          isStuck ? "stuck" : ""
+        }`}
+      >
         <div className="favorites-label">QUICK JUMP</div>
         <div className="favorites-list">
           {favorites.map((fav) => (
@@ -103,7 +130,7 @@ const FavoritesTab = ({
         </div>
       </div>
 
-      {/* 2. Scrollable List of Cards */}
+      {/* 3. List of Cards */}
       <div className="fav-cards-list">
         {favorites.map((fav) => (
           <div
