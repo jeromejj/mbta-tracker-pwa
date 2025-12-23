@@ -14,6 +14,9 @@
   --spacing-md: 15px;
   --spacing-lg: 20px;
   --radius-card: 12px;
+
+  /* Ensure background applies to the entire root canvas */
+  background-color: var(--bg-app);
 }
 
 html {
@@ -26,7 +29,6 @@ html {
   box-sizing: inherit;
 }
 
-html,
 body {
   margin: 0;
   padding: 0;
@@ -35,7 +37,7 @@ body {
   overflow-x: visible;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
-  background-color: var(--bg-app);
+  /* background-color is now on :root */
   color: var(--text-primary);
 }
 
