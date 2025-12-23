@@ -59,12 +59,12 @@ header h1 {
 }
 
 /* =========================================
-   3. SHARED CARDS
+   3. SHARED CONTAINERS
    ========================================= */
-/* NOTE: Removed .thermometer from here to prevent padding conflicts */
+/* Wrappers for content blocks */
 .selector-group,
-.destination-card,
-.favorites-container {
+.favorites-container,
+.predictions-container {
   background: var(--bg-card);
   padding: 15px;
   border-radius: var(--radius-card);
@@ -74,9 +74,7 @@ header h1 {
   min-width: 0;
 }
 
-.destination-card {
-  border-left: 6px solid var(--line-color, #003da5);
-}
+/* Prediction Card Styles removed from here -> moved to Favorite.css */
 
 /* =========================================
    4. FORM ELEMENTS
@@ -105,71 +103,7 @@ select {
 }
 
 /* =========================================
-   5. PREDICTION LIST VIEW
-   ========================================= */
-.predictions-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.destinations-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: auto;
-}
-
-.destination-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 1.1rem;
-  color: #444;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
-}
-
-.train-row-container {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  overflow-x: auto;
-  padding-bottom: 5px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.train-pill {
-  background-color: color-mix(in srgb, var(--line-color, #003da5), white 90%);
-  border: 1px solid var(--line-color, #003da5);
-  color: var(--line-color, #003da5);
-  padding: 10px 16px;
-  min-width: 100px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 1.2rem;
-  white-space: nowrap;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.new-badge {
-  margin-left: 6px;
-  font-size: 0.9em;
-  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
-}
-
-.no-data,
-.no-selection-msg {
-  text-align: center;
-  color: #999;
-  font-style: italic;
-  margin-top: 20px;
-}
-
-/* =========================================
-   6. FAVORITES & NAV
+   5. LIST ITEMS (Chips & Pills)
    ========================================= */
 .favorites-label {
   font-size: 0.75rem;
@@ -178,7 +112,6 @@ select {
   margin-bottom: 8px;
   margin-left: 5px;
 }
-
 .favorites-list {
   display: flex;
   gap: 10px;
@@ -186,7 +119,6 @@ select {
   padding-bottom: 5px;
   width: 100%;
 }
-
 .fav-chip {
   background: white;
   border: 1px solid var(--border-light);
@@ -200,13 +132,40 @@ select {
   gap: 8px;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: pointer;
 }
-
 .fav-route-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background-color: var(--chip-color, #333);
+}
+
+.train-row-container {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+.train-pill {
+  /* Colors handled inline */
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  min-width: 100px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.new-badge {
+  margin-left: 6px;
+  font-size: 0.9em;
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
 }
 
 .star-btn {
@@ -219,6 +178,9 @@ select {
   line-height: 1;
 }
 
+/* =========================================
+   6. NAVIGATION
+   ========================================= */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -232,7 +194,6 @@ select {
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 }
-
 .nav-item {
   background: none;
   border: none;
@@ -242,17 +203,22 @@ select {
   color: #999;
   cursor: pointer;
 }
-
 .nav-item.active {
   color: var(--line-color, #003da5);
 }
-
 .nav-icon {
   font-size: 1.5rem;
   margin-bottom: 2px;
 }
-
 .nav-label {
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+.no-data,
+.no-selection-msg {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  margin-top: 20px;
 }

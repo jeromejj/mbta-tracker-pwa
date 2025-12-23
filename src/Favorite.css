@@ -1,0 +1,87 @@
+/* =========================================
+   FAVORITES & PREDICTION CARDS
+   ========================================= */
+
+/* --- CARD STYLING --- */
+/* Used by both Search (App) and Favorites */
+.destination-card {
+  background: var(--bg-card);
+  padding: 15px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.destination-group {
+  margin-bottom: 15px;
+}
+.destination-group:last-child {
+  margin-bottom: 0;
+}
+
+.destination-group h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: #444;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+/* --- HEADER INSIDE CARD --- */
+.predictions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.predictions-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.live-indicator {
+  font-size: 0.8rem;
+  color: red;
+  font-weight: bold;
+  text-transform: uppercase;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* --- FAVORITES TAB LAYOUT --- */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Visual tweaks to make it look like a floating header */
+  border-radius: 0 0 12px 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+  background: var(--bg-card);
+  padding: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fav-section {
+  /* Offset scroll position so the sticky header doesn't cover the card title */
+  scroll-margin-top: 140px;
+}
+
+.no-data-msg {
+  text-align: center;
+  margin-top: 50px;
+  color: #888;
+}
