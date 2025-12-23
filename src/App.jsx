@@ -47,6 +47,13 @@ const useMbtaData = () => {
   const [vehicles, setVehicles] = useState([]); 
   const [loading, setLoading] = useState(false);
 
+  // Helper: Wrapper for fetch that adds the API Key automatically
+  const apiFetch = async (url) => {
+    const apiKey = import.meta.env.VITE_MBTA_API_KEY;
+    const headers = apiKey ? { 'x-api-key': apiKey } : {};
+    return fetch(url, { headers });
+  };
+
   const normalizeName = (name) => {
     if (!name) return "";
     return name.toLowerCase().replace("street", "st").replace(/\s+/g, '').trim();
@@ -62,7 +69,7 @@ const useMbtaData = () => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const response = await fetch('https://api-v3.mbta.com/routes?filter[type]=0,1,3');
+        const response = await apiFetch('https://api-v3.mbta.com/routes?filter[type]=0,1,3');
         const json = await response.json();
         const filteredRoutes = json.data.filter(r => SUBWAY_FILTERS.includes(r.id));
         filteredRoutes.sort((a, b) => a.attributes.sort_order - b.attributes.sort_order);
@@ -80,7 +87,7 @@ const useMbtaData = () => {
     setStops([]);
     setPredictionGroups([]);
     try {
-      const response = await fetch(`https://api-v3.mbta.com/stops?filter[route]=${routeId}`);
+      const response = await apiFetch(`https://api-v3.mbta.com/stops?filter[route]=${routeId}`);
       const json = await response.json();
       return json.data; 
     } catch (err) {
@@ -97,7 +104,7 @@ const useMbtaData = () => {
       const currentStop = currentStopsList.find(s => s.id === stopId);
       const currentStopNameNorm = currentStop ? normalizeName(currentStop.attributes.name) : "";
 
-      const response = await fetch(
+      const response = await apiFetch(
         `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip,vehicle`
       );
       const json = await response.json();
@@ -153,10 +160,10 @@ const useMbtaData = () => {
     }
   };
 
-  // 4. Fetch Vehicles (With Parent Station Fix)
+  // 4. Fetch Vehicles
   const fetchVehicles = async (routeId, directionId) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `https://api-v3.mbta.com/vehicles?filter[route]=${routeId}&include=stop`
       );
       const json = await response.json();
