@@ -4,23 +4,41 @@
 
 .map-container {
   /* CONSTANTS */
-  --track-axis: 30px;        
+  --track-axis: 30px;
   --row-height: 50px;
 }
 
 /* --- TOGGLES --- */
 .direction-toggle {
-  background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
-.toggle-row { display: flex; gap: 10px; margin-top: 10px; }
+
+.toggle-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .toggle-row button {
-  flex: 1; padding: 10px; border: 1px solid #ddd;
-  background: #f9f9f9; border-radius: 8px; font-weight: 600;
-  color: #666; cursor: pointer; transition: all 0.2s ease;
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+
 .toggle-row button.active {
-  background: var(--line-color); color: white; border-color: var(--line-color);
+  background: var(--line-color);
+  color: white;
+  border-color: var(--line-color);
 }
 
 /* --- LAYOUTS --- */
@@ -29,13 +47,18 @@
   margin-top: 20px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  overflow: hidden; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
   padding: 0;
 }
 
-.red-line-layout { padding-bottom: 10px; }
-.trunk-container { position: relative; }
+.red-line-layout {
+  padding-bottom: 10px;
+}
+
+.trunk-container {
+  position: relative;
+}
 
 .branches-container {
   display: flex;
@@ -47,13 +70,19 @@
 /* --- SVG LAYER --- */
 .track-svg-layer {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 0;
   pointer-events: none;
 }
 
 /* --- COLUMNS --- */
-.branch-column { flex: 1; position: relative; }
+.branch-column {
+  flex: 1;
+  position: relative;
+}
 
 /* --- ROWS & MARKERS --- */
 .map-stop-row {
@@ -69,7 +98,7 @@
 }
 
 .map-stop-row:hover {
-  background-color: rgba(0,0,0,0.02);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 /* LEFT MARKER AREA (Ashmont / Trunk / Standard) */
@@ -90,6 +119,7 @@
   transform: translateX(-50%);
   width: 40px;
 }
+
 .trunk-container .map-stop-name {
   padding-left: calc(40% + 20px);
 }
@@ -97,10 +127,11 @@
 /* Ashmont: 40% of its column (which is 20% of total) */
 .ashmont-col .map-marker-area {
   position: absolute;
-  left: 40%; 
+  left: 40%;
   transform: translateX(-50%);
   width: 40px;
 }
+
 .ashmont-col .map-stop-name {
   padding-left: calc(40% + 20px);
 }
@@ -112,30 +143,50 @@
   transform: translateX(-50%);
   width: 40px;
 }
+
 .braintree-col .map-stop-name {
   padding-left: calc(20% + 20px);
 }
 
 /* TEXT */
 .map-stop-name {
-  font-size: 0.95rem; color: #333; font-weight: 500;
-  flex: 1; padding-left: 0; padding-right: 10px;
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+  padding-left: 0;
+  padding-right: 10px;
 }
 
 /* DOTS & ICONS */
 .stop-dot {
-  width: 12px; height: 12px; background: white;
+  width: 12px;
+  height: 12px;
+  background: white;
   border: 3px solid var(--line-color, #999);
-  border-radius: 50%; z-index: 1; box-sizing: border-box;
+  border-radius: 50%;
+  z-index: 1;
+  box-sizing: border-box;
 }
 
 .train-marker {
-  position: absolute; 
-  left: 50%; margin-left: -14px;
-  background: white; border: 2px solid var(--line-color);
-  border-radius: 50%; width: 28px; height: 28px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 2; transition: top 0.3s ease;
+  position: absolute;
+  left: 50%;
+  margin-left: -14px;
+  background: white;
+  border: 2px solid var(--line-color);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  transition: top 0.3s ease;
 }
-.train-marker.moving { border-style: dashed; }
+
+.train-marker.moving {
+  border-style: dashed;
+}
