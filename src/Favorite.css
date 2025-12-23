@@ -3,7 +3,6 @@
    ========================================= */
 
 /* --- CARD STYLING --- */
-/* Used by both Search (App) and Favorites */
 .destination-card {
   background: var(--bg-card);
   padding: 15px;
@@ -66,8 +65,9 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  /* Visual tweaks to make it look like a floating header */
-  border-radius: 0 0 12px 12px;
+
+  border-radius: var(--radius-card);
+
   margin-bottom: 10px;
   border-bottom: 1px solid #ddd;
   background: var(--bg-card);
@@ -76,7 +76,6 @@
 }
 
 .fav-section {
-  /* Offset scroll position so the sticky header doesn't cover the card title */
   scroll-margin-top: 140px;
 }
 
