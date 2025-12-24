@@ -226,6 +226,24 @@ select {
   margin-top: 20px;
 }
 
+/* Directional Grouping Styles */
+.direction-section {
+  margin-bottom: 25px;
+}
+.direction-section:last-child {
+  margin-bottom: 0;
+}
+.direction-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: 5px;
+  margin-bottom: 12px;
+}
+
 /* UTILITY: Safe Fade In that doesn't break sticky */
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;

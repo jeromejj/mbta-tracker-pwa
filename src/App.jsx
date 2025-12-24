@@ -94,8 +94,29 @@ const useMbtaData = () => {
       });
     }
 
-    const groups = {};
     const stopNameNorm = normalizeName(stopName);
+    const directionMap = {};
+
+    // Helper to get direction name
+    const getDirectionName = (dirId) => {
+      const route = routes.find((r) => r.id === routeId);
+      const names = route?.attributes?.direction_names || [
+        "Outbound",
+        "Inbound",
+      ];
+      const name = names[dirId] || "Unknown";
+      // Ensure "bound" suffix if missing and simple name
+      if (
+        (name === "South" ||
+          name === "North" ||
+          name === "West" ||
+          name === "East") &&
+        !name.includes("bound")
+      ) {
+        return `${name}bound`;
+      }
+      return name;
+    };
 
     json.data.forEach((pred) => {
       const arrivalTime = new Date(
@@ -114,14 +135,24 @@ const useMbtaData = () => {
         if (headsign === "Green Line E") headsign = "Heath St";
         if (normalizeName(headsign) === stopNameNorm) return;
 
-        if (!groups[headsign]) {
-          groups[headsign] = {
+        const dirId = pred.attributes.direction_id;
+
+        if (!directionMap[dirId]) {
+          directionMap[dirId] = {
+            id: dirId,
+            title: getDirectionName(dirId),
+            subgroups: {},
+          };
+        }
+
+        if (!directionMap[dirId].subgroups[headsign]) {
+          directionMap[dirId].subgroups[headsign] = {
             name: headsign,
-            directionId: pred.attributes.direction_id,
             trains: [],
           };
         }
-        groups[headsign].trains.push({
+
+        directionMap[dirId].subgroups[headsign].trains.push({
           id: pred.id,
           minutes: minutes < 1 ? "Now" : `${minutes} min`,
           status: pred.attributes.status,
@@ -130,16 +161,19 @@ const useMbtaData = () => {
       }
     });
 
-    return Object.values(groups)
-      .map((group) => ({
-        ...group,
-        trains: group.trains.sort((a, b) =>
-          a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)
-        ),
-      }))
-      .sort(
-        (a, b) => a.directionId - b.directionId || a.name.localeCompare(b.name)
-      );
+    // Flatten logic
+    return Object.values(directionMap).map((dirGroup) => ({
+      direction: dirGroup.title,
+      directionId: dirGroup.id,
+      groups: Object.values(dirGroup.subgroups)
+        .map((sub) => ({
+          ...sub,
+          trains: sub.trains.sort((a, b) =>
+            a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)
+          ),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    })).sort((a, b) => a.directionId - b.directionId);
   };
 
   useEffect(() => {
