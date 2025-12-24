@@ -181,6 +181,25 @@ const useMbtaData = () => {
     }
   };
 
+const TRUNK_STATIONS = {
+  // B, C, D, E (All Branches)
+  Copley: "Green-B,Green-C,Green-D,Green-E",
+  Arlington: "Green-B,Green-C,Green-D,Green-E",
+  Boylston: "Green-B,Green-C,Green-D,Green-E",
+  "Park Street": "Green-B,Green-C,Green-D,Green-E",
+  "Government Center": "Green-B,Green-C,Green-D,Green-E",
+
+  // D, E (North Side Trunk)
+  Haymarket: "Green-D,Green-E",
+  "North Station": "Green-D,Green-E",
+  "Science Park/West End": "Green-D,Green-E",
+  Lechmere: "Green-D,Green-E",
+
+  // B, C, D (Kenmore Branching)
+  Kenmore: "Green-B,Green-C,Green-D",
+  "Hynes Convention Center": "Green-B,Green-C,Green-D",
+};
+
   const fetchPredictions = async (
     routeId,
     stopId,
@@ -190,8 +209,16 @@ const useMbtaData = () => {
       const currentStop = currentStopsList.find((s) => s.id === stopId);
       const stopName = currentStop ? currentStop.attributes.name : "";
 
+      let routeFilter = routeId;
+      if (TRUNK_STATIONS[stopName]) {
+        const trunkRoutes = TRUNK_STATIONS[stopName];
+        if (trunkRoutes.includes(routeId)) {
+          routeFilter = trunkRoutes;
+        }
+      }
+
       const response = await apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip,vehicle`
+        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       );
       const json = await response.json();
       const processed = processPredictions(json, stopName, routeId);
