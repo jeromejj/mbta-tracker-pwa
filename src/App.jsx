@@ -230,17 +230,25 @@ const TRUNK_STATIONS = {
 
   const fetchAllFavorites = async (favoritesList) => {
     if (!favoritesList || favoritesList.length === 0) return;
-    const promises = favoritesList.map((fav) =>
-      apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${fav.routeId}&sort=arrival_time&include=trip,vehicle`
+    const promises = favoritesList.map((fav) => {
+      let routeFilter = fav.routeId;
+      if (TRUNK_STATIONS[fav.stopName]) {
+        const trunkRoutes = TRUNK_STATIONS[fav.stopName];
+        if (trunkRoutes.includes(fav.routeId)) {
+          routeFilter = trunkRoutes;
+        }
+      }
+
+      return apiFetch(
+        `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       )
         .then((res) => res.json())
         .then((json) => ({
           id: fav.stopId,
           data: processPredictions(json, fav.stopName, fav.routeId),
         }))
-        .catch((err) => ({ id: fav.stopId, data: [] }))
-    );
+        .catch((err) => ({ id: fav.stopId, data: [] }));
+    });
     const results = await Promise.all(promises);
     const newMap = {};
     results.forEach((res) => {
