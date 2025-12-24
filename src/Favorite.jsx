@@ -33,7 +33,7 @@ export const PredictionCard = ({
             <h4 className="direction-label">{dirGroup.direction}</h4>
             {dirGroup.groups.map((group) => (
               <div key={group.name} className="destination-group">
-                <h3>To {group.name}</h3>
+                <h3>{group.name}</h3>
                 <div className="train-row-container">
                   {group.trains.map((t) => (
                     <div
