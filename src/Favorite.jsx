@@ -6,6 +6,7 @@ export const PredictionCard = ({
   title,
   groups,
   onStarClick,
+  onTrainClick,
   isFav,
   lineColor,
   extra,
@@ -39,10 +40,13 @@ export const PredictionCard = ({
                     <div
                       key={t.id}
                       className="train-pill"
+                      // CLICK HANDLER
+                      onClick={() => onTrainClick && onTrainClick(t)}
                       style={{
                         backgroundColor: `color-mix(in srgb, ${lineColor}, white 90%)`,
                         borderColor: lineColor,
                         color: lineColor,
+                        cursor: "pointer", // Show interactivity
                       }}
                     >
                       <span className="time">
@@ -69,18 +73,17 @@ const FavoritesTab = ({
   favoritePredictions,
   toggleFavorite,
   getLineColor,
+  onTrainClick,
 }) => {
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = useRef(null);
 
-  // Scroll logic to detect when header hits the top
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // If sentinel is NOT visible, it means we've scrolled past it -> Header is stuck
         setIsStuck(!entry.isIntersecting);
       },
-      { threshold: 0, rootMargin: "-1px 0px 0px 0px" } // Trigger exactly at top
+      { threshold: 0, rootMargin: "-1px 0px 0px 0px" }
     );
 
     if (sentinelRef.current) {
@@ -110,10 +113,8 @@ const FavoritesTab = ({
 
   return (
     <div className="favorites-view fade-in">
-      {/* 1. Invisible Sentinel (Detects scroll position) */}
       <div ref={sentinelRef} className="sticky-sentinel" />
 
-      {/* 2. Sticky Header with dynamic 'stuck' class */}
       <div
         className={`favorites-container sticky-header ${
           isStuck ? "stuck" : ""
@@ -135,7 +136,6 @@ const FavoritesTab = ({
         </div>
       </div>
 
-      {/* 3. List of Cards */}
       <div className="fav-cards-list">
         {favorites.map((fav) => (
           <div
@@ -153,6 +153,7 @@ const FavoritesTab = ({
                   { id: fav.routeId }
                 )
               }
+              onTrainClick={onTrainClick} // <--- Pass down
               lineColor={getLineColor(fav.routeId)}
             />
           </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import MapView from "./MapView";
-import FavoritesTab, { PredictionCard } from "./Favorite"; // <--- IMPORT
+import FavoritesTab, { PredictionCard } from "./Favorite";
 import "./App.css";
 
 // --- CONFIGURATION ---
@@ -86,18 +86,21 @@ const useMbtaData = () => {
     const now = new Date();
     const tripMap = {};
     const vehicleMap = {};
+    const vehicleDirMap = {};
+
     if (json.included) {
       json.included.forEach((item) => {
         if (item.type === "trip") tripMap[item.id] = item.attributes.headsign;
-        if (item.type === "vehicle")
+        if (item.type === "vehicle") {
           vehicleMap[item.id] = item.attributes.label;
+          vehicleDirMap[item.id] = item.attributes.direction_id;
+        }
       });
     }
 
     const stopNameNorm = normalizeName(stopName);
     const directionMap = {};
 
-    // Helper to get direction name
     const getDirectionName = (dirId) => {
       const route = routes.find((r) => r.id === routeId);
       const names = route?.attributes?.direction_names || [
@@ -105,7 +108,6 @@ const useMbtaData = () => {
         "Inbound",
       ];
       const name = names[dirId] || "Unknown";
-      // Ensure "bound" suffix if missing and simple name
       if (
         (name === "South" ||
           name === "North" ||
@@ -130,6 +132,7 @@ const useMbtaData = () => {
         const vehicleId = pred.relationships?.vehicle?.data?.id;
         let headsign = tripMap[tripId] || pred.attributes.headsign || "Train";
         let carLabel = vehicleMap[vehicleId];
+        let currentVehicleDir = vehicleDirMap[vehicleId];
 
         if (headsign === "Green Line D") headsign = "Riverside";
         if (headsign === "Green Line E") headsign = "Heath St";
@@ -144,7 +147,6 @@ const useMbtaData = () => {
             subgroups: {},
           };
         }
-
         if (!directionMap[dirId].subgroups[headsign]) {
           directionMap[dirId].subgroups[headsign] = {
             name: headsign,
@@ -154,6 +156,10 @@ const useMbtaData = () => {
 
         directionMap[dirId].subgroups[headsign].trains.push({
           id: pred.id,
+          routeId: routeId,
+          directionId: dirId,
+          vehicleId: vehicleId,
+          vehicleDirectionId: currentVehicleDir,
           minutes: minutes < 1 ? "Now" : `${minutes} min`,
           status: pred.attributes.status,
           isNew: isNewTrain(routeId, carLabel),
@@ -161,19 +167,22 @@ const useMbtaData = () => {
       }
     });
 
-    // Flatten logic
-    return Object.values(directionMap).map((dirGroup) => ({
-      direction: dirGroup.title,
-      directionId: dirGroup.id,
-      groups: Object.values(dirGroup.subgroups)
-        .map((sub) => ({
-          ...sub,
-          trains: sub.trains.sort((a, b) =>
-            a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)
-          ),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    })).sort((a, b) => a.directionId - b.directionId);
+    return Object.values(directionMap)
+      .map((dirGroup) => ({
+        direction: dirGroup.title,
+        directionId: dirGroup.id,
+        groups: Object.values(dirGroup.subgroups)
+          .map((sub) => ({
+            ...sub,
+            trains: sub.trains.sort((a, b) =>
+              a.minutes === "Now"
+                ? -1
+                : parseInt(a.minutes) - parseInt(b.minutes)
+            ),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.directionId - b.directionId);
   };
 
   useEffect(() => {
@@ -215,24 +224,19 @@ const useMbtaData = () => {
     }
   };
 
-const TRUNK_STATIONS = {
-  // B, C, D, E (All Branches)
-  Copley: "Green-B,Green-C,Green-D,Green-E",
-  Arlington: "Green-B,Green-C,Green-D,Green-E",
-  Boylston: "Green-B,Green-C,Green-D,Green-E",
-  "Park Street": "Green-B,Green-C,Green-D,Green-E",
-  "Government Center": "Green-B,Green-C,Green-D,Green-E",
-
-  // D, E (North Side Trunk)
-  Haymarket: "Green-D,Green-E",
-  "North Station": "Green-D,Green-E",
-  "Science Park/West End": "Green-D,Green-E",
-  Lechmere: "Green-D,Green-E",
-
-  // B, C, D (Kenmore Branching)
-  Kenmore: "Green-B,Green-C,Green-D",
-  "Hynes Convention Center": "Green-B,Green-C,Green-D",
-};
+  const TRUNK_STATIONS = {
+    Copley: "Green-B,Green-C,Green-D,Green-E",
+    Arlington: "Green-B,Green-C,Green-D,Green-E",
+    Boylston: "Green-B,Green-C,Green-D,Green-E",
+    "Park Street": "Green-B,Green-C,Green-D,Green-E",
+    "Government Center": "Green-B,Green-C,Green-D,Green-E",
+    Haymarket: "Green-D,Green-E",
+    "North Station": "Green-D,Green-E",
+    "Science Park/West End": "Green-D,Green-E",
+    Lechmere: "Green-D,Green-E",
+    Kenmore: "Green-B,Green-C,Green-D",
+    "Hynes Convention Center": "Green-B,Green-C,Green-D",
+  };
 
   const fetchPredictions = async (
     routeId,
@@ -242,15 +246,11 @@ const TRUNK_STATIONS = {
     try {
       const currentStop = currentStopsList.find((s) => s.id === stopId);
       const stopName = currentStop ? currentStop.attributes.name : "";
-
       let routeFilter = routeId;
       if (TRUNK_STATIONS[stopName]) {
         const trunkRoutes = TRUNK_STATIONS[stopName];
-        if (trunkRoutes.includes(routeId)) {
-          routeFilter = trunkRoutes;
-        }
+        if (trunkRoutes.includes(routeId)) routeFilter = trunkRoutes;
       }
-
       const response = await apiFetch(
         `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       );
@@ -268,11 +268,8 @@ const TRUNK_STATIONS = {
       let routeFilter = fav.routeId;
       if (TRUNK_STATIONS[fav.stopName]) {
         const trunkRoutes = TRUNK_STATIONS[fav.stopName];
-        if (trunkRoutes.includes(fav.routeId)) {
-          routeFilter = trunkRoutes;
-        }
+        if (trunkRoutes.includes(fav.routeId)) routeFilter = trunkRoutes;
       }
-
       return apiFetch(
         `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       )
@@ -337,6 +334,7 @@ const TRUNK_STATIONS = {
     fetchAllFavorites,
     fetchVehicles,
     loading,
+    setStops,
   };
 };
 
@@ -355,7 +353,6 @@ const getLineColor = (routeId) => {
 function App() {
   const {
     routes,
-    setStops,
     stops,
     predictionGroups,
     favoritePredictions,
@@ -365,6 +362,7 @@ function App() {
     fetchAllFavorites,
     fetchVehicles,
     loading,
+    setStops,
   } = useMbtaData();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
@@ -372,6 +370,7 @@ function App() {
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
   const [mapDirection, setMapDirection] = useState(0);
+  const [highlightedTrainId, setHighlightedTrainId] = useState(null);
 
   useEffect(() => {
     let intervalId;
@@ -391,6 +390,7 @@ function App() {
     return () => clearInterval(intervalId);
   }, [currentTab, selectedRoute, selectedStop, mapDirection, favorites]);
 
+  // ... (Handlers unchanged) ...
   const handleRouteSelect = async (e) => {
     const routeId = e.target.value;
     const routeObj = routes.find((r) => r.id === routeId);
@@ -411,6 +411,33 @@ function App() {
   const handleMapStationClick = (stop) => {
     setSelectedStop(stop);
     setCurrentTab("list");
+  };
+
+  // --- TRAIN CLICK HANDLER ---
+  const handleTrainClick = async (train) => {
+    if (!train.vehicleId) {
+      console.log("No vehicle ID available for this train");
+      return;
+    }
+
+    const routeObj = routes.find((r) => r.id === train.routeId);
+    if (routeObj) {
+      setSelectedRoute(routeObj);
+      if (!selectedRoute || selectedRoute.id !== train.routeId) {
+        const newStops = await fetchStops(train.routeId);
+        setStops(newStops);
+      }
+    }
+
+    const dirToSet =
+      train.vehicleDirectionId !== undefined &&
+      train.vehicleDirectionId !== null
+        ? train.vehicleDirectionId
+        : train.directionId;
+
+    setMapDirection(dirToSet);
+    setHighlightedTrainId(train.vehicleId);
+    setCurrentTab("map");
   };
 
   const lineColor = getLineColor(selectedRoute?.id);
@@ -463,7 +490,6 @@ function App() {
 
             {selectedStop && (
               <div className="predictions-container slide-in">
-                {/* Reusing the component from Favorite.jsx */}
                 <PredictionCard
                   title={selectedStop.attributes.name}
                   groups={predictionGroups}
@@ -471,6 +497,7 @@ function App() {
                   onStarClick={() =>
                     toggleFavorite(selectedStop, selectedRoute)
                   }
+                  onTrainClick={handleTrainClick}
                   lineColor={lineColor}
                 />
               </div>
@@ -485,6 +512,7 @@ function App() {
             favoritePredictions={favoritePredictions}
             toggleFavorite={toggleFavorite}
             getLineColor={getLineColor}
+            onTrainClick={handleTrainClick}
           />
         )}
 
@@ -514,6 +542,7 @@ function App() {
               directionId={mapDirection}
               onDirectionChange={setMapDirection}
               onStationSelect={handleMapStationClick}
+              highlightedTrainId={highlightedTrainId}
             />
           </>
         )}

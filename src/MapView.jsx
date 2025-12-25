@@ -37,13 +37,18 @@ const useContainerSize = () => {
 };
 
 // --- Clickable Row ---
-const MapStopRow = ({ stop, vehicles, innerRef, onStationSelect }) => {
+const MapStopRow = ({
+  stop,
+  vehicles,
+  innerRef,
+  onStationSelect,
+  highlightedTrainId,
+}) => {
   const trainsHere = vehicles.filter((v) => v.stopId === stop.id);
   return (
     <div
       className="map-stop-row"
       ref={innerRef}
-      // CLICK HANDLER
       onClick={() => onStationSelect && onStationSelect(stop)}
     >
       <div className="map-marker-area">
@@ -53,7 +58,7 @@ const MapStopRow = ({ stop, vehicles, innerRef, onStationSelect }) => {
             key={train.id}
             className={`train-marker ${
               train.status === "IN_TRANSIT_TO" ? "moving" : ""
-            }`}
+            } ${train.id === highlightedTrainId ? "highlighted" : ""}`}
           >
             <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
           </div>
@@ -179,6 +184,7 @@ const MapView = ({
   onDirectionChange,
   directionId,
   onStationSelect,
+  highlightedTrainId,
 }) => {
   if (!route)
     return <div className="no-selection-msg">Please select a line above</div>;
@@ -187,6 +193,20 @@ const MapView = ({
 
   const ashmontLastRef = useRef(null);
   const braintreeLastRef = useRef(null);
+
+  // AUTO-SCROLL TO HIGHLIGHTED TRAIN
+  useEffect(() => {
+    if (highlightedTrainId) {
+      // Use a small timeout to allow React to render the new marker
+      const timer = setTimeout(() => {
+        const el = document.querySelector(".train-marker.highlighted");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedTrainId, vehicles, directionId]);
 
   const renderRedLine = () => {
     const trunkStops = [];
@@ -220,7 +240,8 @@ const MapView = ({
                     key={stop.id}
                     stop={stop}
                     vehicles={vehicles}
-                    onStationSelect={onStationSelect} // <--- Pass down
+                    onStationSelect={onStationSelect}
+                    highlightedTrainId={highlightedTrainId}
                   />
                 ))}
                 <div
@@ -234,7 +255,8 @@ const MapView = ({
                     key={stop.id}
                     stop={stop}
                     vehicles={vehicles}
-                    onStationSelect={onStationSelect} // <--- Pass down
+                    onStationSelect={onStationSelect}
+                    highlightedTrainId={highlightedTrainId}
                   />
                 ))}
                 <div
@@ -250,7 +272,8 @@ const MapView = ({
                   key={stop.id}
                   stop={stop}
                   vehicles={vehicles}
-                  onStationSelect={onStationSelect} // <--- Pass down
+                  onStationSelect={onStationSelect}
+                  highlightedTrainId={highlightedTrainId}
                 />
               ))}
             </div>
@@ -266,7 +289,8 @@ const MapView = ({
                   key={stop.id}
                   stop={stop}
                   vehicles={vehicles}
-                  onStationSelect={onStationSelect} // <--- Pass down
+                  onStationSelect={onStationSelect}
+                  highlightedTrainId={highlightedTrainId}
                 />
               ))}
             </div>
@@ -292,7 +316,8 @@ const MapView = ({
                     innerRef={
                       i === orderedAshmont.length - 1 ? ashmontLastRef : null
                     }
-                    onStationSelect={onStationSelect} // <--- Pass down
+                    onStationSelect={onStationSelect}
+                    highlightedTrainId={highlightedTrainId}
                   />
                 ))}
               </div>
@@ -312,7 +337,8 @@ const MapView = ({
                         ? braintreeLastRef
                         : null
                     }
-                    onStationSelect={onStationSelect} // <--- Pass down
+                    onStationSelect={onStationSelect}
+                    highlightedTrainId={highlightedTrainId}
                   />
                 ))}
               </div>
@@ -333,7 +359,8 @@ const MapView = ({
             key={stop.id}
             stop={stop}
             vehicles={vehicles}
-            onStationSelect={onStationSelect} // <--- Pass down
+            onStationSelect={onStationSelect}
+            highlightedTrainId={highlightedTrainId}
           />
         ))}
       </div>
