@@ -390,6 +390,13 @@ function App() {
     return () => clearInterval(intervalId);
   }, [currentTab, selectedRoute, selectedStop, mapDirection, favorites]);
 
+  // --- NEW: AUTO-CLEAR HIGHLIGHT ON TAB CHANGE ---
+  useEffect(() => {
+    if (currentTab !== "map") {
+      setHighlightedTrainId(null);
+    }
+  }, [currentTab]);
+
   // ... (Handlers unchanged) ...
   const handleRouteSelect = async (e) => {
     const routeId = e.target.value;
