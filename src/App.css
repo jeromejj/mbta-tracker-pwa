@@ -155,11 +155,11 @@ select {
 }
 .train-pill {
   border: 1px solid transparent;
-  padding: 10px 16px;
-  min-width: 100px;
+  padding: 6px 12px;
+  min-width: 80px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1rem;
   white-space: nowrap;
   display: flex;
   justify-content: center;
@@ -193,7 +193,7 @@ select {
   border-top: 1px solid var(--border-light);
   display: flex;
   justify-content: space-around;
-  padding: 10px 0;
+  padding: 2px 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 }
@@ -224,6 +224,24 @@ select {
   color: #999;
   font-style: italic;
   margin-top: 20px;
+}
+
+/* Directional Grouping Styles */
+.direction-section {
+  margin-bottom: 15px;
+}
+.direction-section:last-child {
+  margin-bottom: 0;
+}
+.direction-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: 5px;
+  margin-bottom: 12px;
 }
 
 /* UTILITY: Safe Fade In that doesn't break sticky */

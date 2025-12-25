@@ -28,27 +28,32 @@ export const PredictionCard = ({
 
     <div className="destinations-list">
       {groups && groups.length > 0 ? (
-        groups.map((group) => (
-          <div key={group.name} className="destination-group">
-            <h3>To {group.name}</h3>
-            <div className="train-row-container">
-              {group.trains.map((t) => (
-                <div
-                  key={t.id}
-                  className="train-pill"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${lineColor}, white 90%)`,
-                    borderColor: lineColor,
-                    color: lineColor,
-                  }}
-                >
-                  <span className="time">
-                    {t.minutes}
-                    {t.isNew && <span className="new-badge">✨</span>}
-                  </span>
+        groups.map((dirGroup) => (
+          <div key={dirGroup.directionId} className="direction-section">
+            <h4 className="direction-label">{dirGroup.direction}</h4>
+            {dirGroup.groups.map((group) => (
+              <div key={group.name} className="destination-group">
+                <h3>{group.name}</h3>
+                <div className="train-row-container">
+                  {group.trains.map((t) => (
+                    <div
+                      key={t.id}
+                      className="train-pill"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${lineColor}, white 90%)`,
+                        borderColor: lineColor,
+                        color: lineColor,
+                      }}
+                    >
+                      <span className="time">
+                        {t.minutes}
+                        {t.isNew && <span className="new-badge">✨</span>}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ))
       ) : (

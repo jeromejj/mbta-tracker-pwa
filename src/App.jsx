@@ -94,8 +94,29 @@ const useMbtaData = () => {
       });
     }
 
-    const groups = {};
     const stopNameNorm = normalizeName(stopName);
+    const directionMap = {};
+
+    // Helper to get direction name
+    const getDirectionName = (dirId) => {
+      const route = routes.find((r) => r.id === routeId);
+      const names = route?.attributes?.direction_names || [
+        "Outbound",
+        "Inbound",
+      ];
+      const name = names[dirId] || "Unknown";
+      // Ensure "bound" suffix if missing and simple name
+      if (
+        (name === "South" ||
+          name === "North" ||
+          name === "West" ||
+          name === "East") &&
+        !name.includes("bound")
+      ) {
+        return `${name}bound`;
+      }
+      return name;
+    };
 
     json.data.forEach((pred) => {
       const arrivalTime = new Date(
@@ -114,14 +135,24 @@ const useMbtaData = () => {
         if (headsign === "Green Line E") headsign = "Heath St";
         if (normalizeName(headsign) === stopNameNorm) return;
 
-        if (!groups[headsign]) {
-          groups[headsign] = {
+        const dirId = pred.attributes.direction_id;
+
+        if (!directionMap[dirId]) {
+          directionMap[dirId] = {
+            id: dirId,
+            title: getDirectionName(dirId),
+            subgroups: {},
+          };
+        }
+
+        if (!directionMap[dirId].subgroups[headsign]) {
+          directionMap[dirId].subgroups[headsign] = {
             name: headsign,
-            directionId: pred.attributes.direction_id,
             trains: [],
           };
         }
-        groups[headsign].trains.push({
+
+        directionMap[dirId].subgroups[headsign].trains.push({
           id: pred.id,
           minutes: minutes < 1 ? "Now" : `${minutes} min`,
           status: pred.attributes.status,
@@ -130,16 +161,19 @@ const useMbtaData = () => {
       }
     });
 
-    return Object.values(groups)
-      .map((group) => ({
-        ...group,
-        trains: group.trains.sort((a, b) =>
-          a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)
-        ),
-      }))
-      .sort(
-        (a, b) => a.directionId - b.directionId || a.name.localeCompare(b.name)
-      );
+    // Flatten logic
+    return Object.values(directionMap).map((dirGroup) => ({
+      direction: dirGroup.title,
+      directionId: dirGroup.id,
+      groups: Object.values(dirGroup.subgroups)
+        .map((sub) => ({
+          ...sub,
+          trains: sub.trains.sort((a, b) =>
+            a.minutes === "Now" ? -1 : parseInt(a.minutes) - parseInt(b.minutes)
+          ),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    })).sort((a, b) => a.directionId - b.directionId);
   };
 
   useEffect(() => {
@@ -181,6 +215,25 @@ const useMbtaData = () => {
     }
   };
 
+const TRUNK_STATIONS = {
+  // B, C, D, E (All Branches)
+  Copley: "Green-B,Green-C,Green-D,Green-E",
+  Arlington: "Green-B,Green-C,Green-D,Green-E",
+  Boylston: "Green-B,Green-C,Green-D,Green-E",
+  "Park Street": "Green-B,Green-C,Green-D,Green-E",
+  "Government Center": "Green-B,Green-C,Green-D,Green-E",
+
+  // D, E (North Side Trunk)
+  Haymarket: "Green-D,Green-E",
+  "North Station": "Green-D,Green-E",
+  "Science Park/West End": "Green-D,Green-E",
+  Lechmere: "Green-D,Green-E",
+
+  // B, C, D (Kenmore Branching)
+  Kenmore: "Green-B,Green-C,Green-D",
+  "Hynes Convention Center": "Green-B,Green-C,Green-D",
+};
+
   const fetchPredictions = async (
     routeId,
     stopId,
@@ -190,8 +243,16 @@ const useMbtaData = () => {
       const currentStop = currentStopsList.find((s) => s.id === stopId);
       const stopName = currentStop ? currentStop.attributes.name : "";
 
+      let routeFilter = routeId;
+      if (TRUNK_STATIONS[stopName]) {
+        const trunkRoutes = TRUNK_STATIONS[stopName];
+        if (trunkRoutes.includes(routeId)) {
+          routeFilter = trunkRoutes;
+        }
+      }
+
       const response = await apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeId}&sort=arrival_time&include=trip,vehicle`
+        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       );
       const json = await response.json();
       const processed = processPredictions(json, stopName, routeId);
@@ -203,17 +264,25 @@ const useMbtaData = () => {
 
   const fetchAllFavorites = async (favoritesList) => {
     if (!favoritesList || favoritesList.length === 0) return;
-    const promises = favoritesList.map((fav) =>
-      apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${fav.routeId}&sort=arrival_time&include=trip,vehicle`
+    const promises = favoritesList.map((fav) => {
+      let routeFilter = fav.routeId;
+      if (TRUNK_STATIONS[fav.stopName]) {
+        const trunkRoutes = TRUNK_STATIONS[fav.stopName];
+        if (trunkRoutes.includes(fav.routeId)) {
+          routeFilter = trunkRoutes;
+        }
+      }
+
+      return apiFetch(
+        `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
       )
         .then((res) => res.json())
         .then((json) => ({
           id: fav.stopId,
           data: processPredictions(json, fav.stopName, fav.routeId),
         }))
-        .catch((err) => ({ id: fav.stopId, data: [] }))
-    );
+        .catch((err) => ({ id: fav.stopId, data: [] }));
+    });
     const results = await Promise.all(promises);
     const newMap = {};
     results.forEach((res) => {

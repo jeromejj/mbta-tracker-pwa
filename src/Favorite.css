@@ -12,18 +12,18 @@
 }
 
 .destination-group {
-  margin-bottom: 15px;
+  margin-bottom: 8px;
 }
 .destination-group:last-child {
   margin-bottom: 0;
 }
 
 .destination-group h3 {
-  margin: 0 0 8px 0;
-  font-size: 1.1rem;
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
   color: #444;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
+  /* border-bottom removed per user request */
+  padding-bottom: 0px;
 }
 
 /* --- HEADER INSIDE CARD --- */
@@ -31,7 +31,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 .predictions-header h2 {
   margin: 0;
