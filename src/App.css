@@ -117,13 +117,24 @@ select {
   margin-bottom: 8px;
   margin-left: 5px;
 }
+
 .favorites-list {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 5px;
   width: 100%;
+
+  /* Hide scrollbar but allow scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
+
+/* Chrome/Safari/Webkit specific hide */
+.favorites-list::-webkit-scrollbar {
+  display: none;
+}
+
 .fav-chip {
   background: white;
   border: 1px solid var(--border-light);
@@ -152,14 +163,24 @@ select {
   width: 100%;
   overflow-x: auto;
   padding-bottom: 5px;
+
+  /* Hide scrollbar but allow scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
+
+/* Chrome/Safari/Webkit specific hide */
+.train-row-container::-webkit-scrollbar {
+  display: none;
+}
+
 .train-pill {
   border: 1px solid transparent;
-  padding: 6px 12px;
-  min-width: 80px;
+  padding: 10px 16px;
+  min-width: 100px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.2rem;
   white-space: nowrap;
   display: flex;
   justify-content: center;
