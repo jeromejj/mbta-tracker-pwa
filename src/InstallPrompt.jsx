@@ -4,30 +4,39 @@ import "./InstallPrompt.css";
 const InstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isFirefox, setIsFirefox] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // 1. Check if user is on iOS
-    const isIosDevice =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    // Check if already in "standalone" (installed) mode to avoid showing it unnecessarily
+    // Check if app is already installed (standalone mode)
     const isStandalone = window.matchMedia(
       "(display-mode: standalone)"
     ).matches;
+    if (isStandalone) return;
 
-    if (isIosDevice && !isStandalone) {
+    const ua = navigator.userAgent;
+
+    // 1. Detect iOS
+    const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    if (isIosDevice) {
       setIsIOS(true);
-      // Optional: Show iOS prompt after a small delay
-      setTimeout(() => setIsVisible(true), 2000);
+      setTimeout(() => setIsVisible(true), 2000); // Small delay for effect
+      return;
     }
 
-    // 2. Listen for the 'beforeinstallprompt' event (Android/Desktop)
+    // 2. Detect Firefox on Android (No 'beforeinstallprompt' support)
+    const isFirefoxAndroid = /Firefox/.test(ua) && /Android/.test(ua);
+    if (isFirefoxAndroid) {
+      setIsFirefox(true);
+      setTimeout(() => setIsVisible(true), 2000);
+      return;
+    }
+
+    // 3. Listen for standard 'beforeinstallprompt'
+    // (Chrome/Edge/Samsung Internet)
     const handleBeforeInstallPrompt = (e) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
       setIsVisible(true);
     };
 
@@ -43,15 +52,9 @@ const InstallPrompt = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
-    // Show the install prompt
     deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-
-    // We've used the prompt, and can't use it again, discard it
+    console.log(`User response: ${outcome}`);
     setDeferredPrompt(null);
     setIsVisible(false);
   };
@@ -66,26 +69,41 @@ const InstallPrompt = () => {
     <div className="install-prompt">
       <div className="install-content">
         <div className="install-text">
-          <h3>Install T Tracker for better experience</h3>
-          {isIOS ? (
+          <h3>Install T Tracker</h3>
+
+          {/* iOS Instructions */}
+          {isIOS && (
             <p>
-              Tap the <strong>Share</strong> button and select{" "}
-              <strong>"Add to Home Screen"</strong>
+              Tap the <strong>Share</strong> button{" "}
+              <span style={{ fontSize: "1.2em" }}>⎋</span> and select{" "}
+              <strong>"Add to Home Screen"</strong> <span>+</span>
             </p>
-          ) : (
-            <p></p>
           )}
+
+          {/* Firefox Android Instructions */}
+          {isFirefox && (
+            <p>
+              Tap the <strong>Menu</strong> icon{" "}
+              <span style={{ fontSize: "1.2em" }}>⋮</span> and select{" "}
+              <strong>"Install"</strong>
+            </p>
+          )}
+
+          {/* Standard Chrome/Edge Message */}
+          {!isIOS && !isFirefox && <p>Get the app for a better experience!</p>}
         </div>
       </div>
 
       <div className="install-actions">
-        {!isIOS && (
+        {/* Only show the magic button for Chrome/Edge/Samsung */}
+        {!isIOS && !isFirefox && (
           <button className="install-btn" onClick={handleInstallClick}>
             Install
           </button>
         )}
+
         <button className="close-btn" onClick={handleClose}>
-          {isIOS ? "Close" : "Not Now"}
+          {isIOS || isFirefox ? "Close" : "Not Now"}
         </button>
       </div>
     </div>
