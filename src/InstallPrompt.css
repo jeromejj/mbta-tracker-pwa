@@ -1,0 +1,76 @@
+.install-prompt {
+  position: fixed;
+  bottom: 80px; /* Sits above the bottom nav */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
+  background-color: var(--brand-blue, #003da5);
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideUp 0.5s ease-out;
+}
+
+.install-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.install-text h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.install-text p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.install-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.install-btn {
+  background: white;
+  color: var(--brand-blue, #003da5);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}

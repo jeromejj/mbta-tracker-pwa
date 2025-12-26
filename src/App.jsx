@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import MapView from "./MapView";
+
 import FavoritesTab, { PredictionCard } from "./Favorite";
+import InstallPrompt from "./InstallPrompt";
+import MapView from "./MapView";
+
 import "./App.css";
 
 // --- CONFIGURATION ---
@@ -554,6 +557,8 @@ function App() {
           </>
         )}
       </main>
+
+      <InstallPrompt />
 
       <nav className="bottom-nav">
         <button
