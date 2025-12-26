@@ -69,14 +69,13 @@ const InstallPrompt = () => {
     <div className="install-prompt">
       <div className="install-content">
         <div className="install-text">
-          <h3>Install T Tracker</h3>
+          <h3>Install T Tracker for better experience</h3>
 
           {/* iOS Instructions */}
           {isIOS && (
             <p>
-              Tap the <strong>Share</strong> button{" "}
-              <span style={{ fontSize: "1.2em" }}>⎋</span> and select{" "}
-              <strong>"Add to Home Screen"</strong> <span>+</span>
+              Tap the <strong>Share</strong> button and select{" "}
+              <strong>Add to Home Screen</strong>
             </p>
           )}
 
@@ -85,12 +84,12 @@ const InstallPrompt = () => {
             <p>
               Tap the <strong>Menu</strong> icon{" "}
               <span style={{ fontSize: "1.2em" }}>⋮</span> and select{" "}
-              <strong>"Install"</strong>
+              <strong>Add app to Home screen</strong>
             </p>
           )}
 
           {/* Standard Chrome/Edge Message */}
-          {!isIOS && !isFirefox && <p>Get the app for a better experience!</p>}
+          {!isIOS && !isFirefox && <p></p>}
         </div>
       </div>
 
