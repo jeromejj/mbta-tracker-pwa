@@ -176,11 +176,11 @@ select {
 
 .train-pill {
   border: 1px solid transparent;
-  padding: 10px 16px;
-  min-width: 100px;
+  padding: 6px 12px;
+  min-width: 80px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1rem;
   white-space: nowrap;
   display: flex;
   justify-content: center;
