@@ -337,7 +337,6 @@ const useMbtaData = () => {
     fetchAllFavorites,
     fetchVehicles,
     loading,
-    setStops,
   };
 };
 
