@@ -62,6 +62,8 @@ const useMbtaData = () => {
   const [predictionGroups, setPredictionGroups] = useState([]);
   const [favoritePredictions, setFavoritePredictions] = useState({});
   const [vehicles, setVehicles] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [favoriteAlerts, setFavoriteAlerts] = useState({});
   const [loading, setLoading] = useState(false);
 
   const apiFetch = async (url) => {
@@ -325,6 +327,63 @@ const useMbtaData = () => {
     }
   };
 
+  const filterActiveServiceAlerts = (data) => {
+    return data.filter((a) => {
+      const isLifecycleActive = ["NEW", "ONGOING", "ONGOING_UPCOMING"].includes(
+        a.attributes.lifecycle
+      );
+      const nonServiceEffects = [
+        "ACCESS_ISSUE",
+        "FACILITY_ISSUE",
+        "BIKE_ISSUE",
+        "PARKING_ISSUE",
+        "PARKING_CLOSURE",
+        "STATION_ISSUE",
+        "ELEVATOR_CLOSURE",
+        "ESCALATOR_CLOSURE",
+        "POLICY_CHANGE",
+      ];
+      return isLifecycleActive && !nonServiceEffects.includes(a.attributes.effect);
+    });
+  };
+
+  const fetchAlerts = async (routeId) => {
+    try {
+      const response = await apiFetch(
+        `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`
+      );
+      const json = await response.json();
+      setAlerts(filterActiveServiceAlerts(json.data));
+    } catch (err) {
+      console.error("Failed to fetch alerts", err);
+    }
+  };
+
+  const fetchFavoriteAlerts = async (favoritesList) => {
+    if (!favoritesList || favoritesList.length === 0) return;
+    const uniqueRouteIds = [...new Set(favoritesList.map((f) => f.routeId))];
+    const promises = uniqueRouteIds.map(async (routeId) => {
+      try {
+        const response = await apiFetch(
+          `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`
+        );
+        const json = await response.json();
+        const activeAlerts = filterActiveServiceAlerts(json.data);
+        return { routeId, hasAlert: activeAlerts.length > 0 };
+      } catch (err) {
+        console.error("Failed to fetch alerts for " + routeId, err);
+        return { routeId, hasAlert: false };
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const newAlertsMap = {};
+    results.forEach((res) => {
+      newAlertsMap[res.routeId] = res.hasAlert;
+    });
+    setFavoriteAlerts(newAlertsMap);
+  };
+
   return {
     routes,
     setStops,
@@ -332,10 +391,14 @@ const useMbtaData = () => {
     predictionGroups,
     favoritePredictions,
     vehicles,
+    alerts,
+    favoriteAlerts,
     fetchStops,
     fetchPredictions,
     fetchAllFavorites,
     fetchVehicles,
+    fetchAlerts,
+    fetchFavoriteAlerts,
     loading,
   };
 };
@@ -359,10 +422,14 @@ function App() {
     predictionGroups,
     favoritePredictions,
     vehicles,
+    alerts,
+    favoriteAlerts,
     fetchStops,
     fetchPredictions,
     fetchAllFavorites,
     fetchVehicles,
+    fetchAlerts,
+    fetchFavoriteAlerts,
     loading,
     setStops,
   } = useMbtaData();
@@ -382,6 +449,7 @@ function App() {
       }
       if (currentTab === "favorites" && favorites.length > 0) {
         fetchAllFavorites(favorites);
+        fetchFavoriteAlerts(favorites);
       }
       if (currentTab === "map" && selectedRoute) {
         fetchVehicles(selectedRoute.id, mapDirection);
@@ -391,6 +459,12 @@ function App() {
     intervalId = setInterval(poll, 4000);
     return () => clearInterval(intervalId);
   }, [currentTab, selectedRoute, selectedStop, mapDirection, favorites]);
+
+  useEffect(() => {
+    if (selectedRoute) {
+      fetchAlerts(selectedRoute.id);
+    }
+  }, [selectedRoute]);
 
   // --- NEW: AUTO-CLEAR HIGHLIGHT ON TAB CHANGE ---
   useEffect(() => {
@@ -478,6 +552,20 @@ function App() {
               </select>
             </div>
 
+            {alerts.length > 0 && (
+              <div className="alert-container slide-in">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="alert-box">
+                    <span className="alert-icon">⚠️</span>
+                    <div className="alert-content">
+                      <strong>{alert.attributes.service_effect || "Service Alert"}</strong>
+                      <p>{alert.attributes.header}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {selectedRoute && (
               <div className="selector-group slide-in">
                 <label>Select Station</label>
@@ -519,6 +607,7 @@ function App() {
           <FavoritesTab
             favorites={favorites}
             favoritePredictions={favoritePredictions}
+            favoriteAlerts={favoriteAlerts}
             toggleFavorite={toggleFavorite}
             getLineColor={getLineColor}
             onTrainClick={handleTrainClick}
@@ -544,6 +633,21 @@ function App() {
                 ))}
               </select>
             </div>
+
+            {alerts.length > 0 && (
+              <div className="alert-container slide-in">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="alert-box">
+                    <span className="alert-icon">⚠️</span>
+                    <div className="alert-content">
+                      <strong>{alert.attributes.service_effect || "Service Alert"}</strong>
+                      <p>{alert.attributes.header}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <MapView
               route={selectedRoute}
               stops={stops}

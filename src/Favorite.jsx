@@ -71,6 +71,7 @@ export const PredictionCard = ({
 const FavoritesTab = ({
   favorites,
   favoritePredictions,
+  favoriteAlerts,
   toggleFavorite,
   getLineColor,
   onTrainClick,
@@ -144,7 +145,16 @@ const FavoritesTab = ({
             className="fav-section"
           >
             <PredictionCard
-              title={fav.stopName}
+              title={
+                <>
+                  {fav.stopName}
+                  {favoriteAlerts && favoriteAlerts[fav.routeId] && (
+                    <span className="alert-icon-fav" title="Service Alert">
+                      ⚠️
+                    </span>
+                  )}
+                </>
+              }
               groups={favoritePredictions[fav.stopId]}
               isFav={true}
               onStarClick={() =>

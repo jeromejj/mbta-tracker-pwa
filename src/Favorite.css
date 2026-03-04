@@ -115,3 +115,11 @@
   margin-top: 50px;
   color: #888;
 }
+
+/* --- FAVORITE ALERTS --- */
+.alert-icon-fav {
+  font-size: 1.1rem;
+  margin-left: 8px;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+}
