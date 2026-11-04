@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import FavoritesTab, { PredictionCard } from "./Favorite";
 import InstallPrompt from "./InstallPrompt";
 import MapView from "./MapView";
 
 import "./App.css";
+
+const getFavoriteKey = (routeId, stopId) => `${routeId}:${stopId}`;
 
 // --- CONFIGURATION ---
 const SUBWAY_FILTERS = [
@@ -19,39 +21,129 @@ const SUBWAY_FILTERS = [
   "741",
   "742",
   "743",
+  "746",
   "751",
   "749",
 ];
 
+const TRUNK_STATIONS = {
+  Copley: "Green-B,Green-C,Green-D,Green-E",
+  Arlington: "Green-B,Green-C,Green-D,Green-E",
+  Boylston: "Green-B,Green-C,Green-D,Green-E",
+  "Park Street": "Green-B,Green-C,Green-D,Green-E",
+  "Government Center": "Green-B,Green-C,Green-D,Green-E",
+  Haymarket: "Green-D,Green-E",
+  "North Station": "Green-D,Green-E",
+  "Science Park/West End": "Green-D,Green-E",
+  Lechmere: "Green-D,Green-E",
+  Kenmore: "Green-B,Green-C,Green-D",
+  "Hynes Convention Center": "Green-B,Green-C,Green-D",
+};
+
+const POLL_INTERVAL_MS = 10000;
+const ALERT_POLL_INTERVAL_MS = 60000;
+
+const getTrunkRouteFilter = (stopName, routeId) => {
+  if (stopName && TRUNK_STATIONS[stopName]) {
+    const trunkRoutes = TRUNK_STATIONS[stopName];
+    if (trunkRoutes.split(",").includes(routeId)) {
+      return trunkRoutes;
+    }
+  }
+  return routeId;
+};
+
+const normalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\bstreet\b/g, "st")
+    .replace(/\s+/g, "")
+    .trim();
+};
+
+const isNewTrain = (routeId, label) => {
+  if (routeId !== "Red" || !label) return false;
+  const carNumber = parseInt(label.split("-")[0], 10);
+  return !isNaN(carNumber) && carNumber >= 1900;
+};
+
+const filterActiveServiceAlerts = (data) => {
+  if (!Array.isArray(data)) return [];
+  const nonServiceEffects = [
+    "ACCESS_ISSUE",
+    "FACILITY_ISSUE",
+    "BIKE_ISSUE",
+    "PARKING_ISSUE",
+    "PARKING_CLOSURE",
+    "STATION_ISSUE",
+    "ELEVATOR_CLOSURE",
+    "ESCALATOR_CLOSURE",
+    "POLICY_CHANGE",
+  ];
+  return data.filter((a) => {
+    const isLifecycleActive = [
+      "NEW",
+      "ONGOING",
+      "ONGOING_UPCOMING",
+    ].includes(a.attributes?.lifecycle);
+    return (
+      isLifecycleActive && !nonServiceEffects.includes(a.attributes?.effect)
+    );
+  });
+};
+
 // --- HOOK: Manage Favorites ---
 const useFavorites = () => {
-  const [favorites, setFavorites] = useState([]);
-  useEffect(() => {
-    const saved = localStorage.getItem("mbta_favorites");
-    if (saved) setFavorites(JSON.parse(saved));
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem("mbta_favorites");
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.error("Failed to parse saved favorites", err);
+      return [];
+    }
+  });
+
+  const toggleFavorite = useCallback((stop, route) => {
+    if (!stop || !route) return;
+    setFavorites((prev) => {
+      const exists = prev.some(
+        (f) => f.stopId === stop.id && f.routeId === route.id
+      );
+      const next = exists
+        ? prev.filter(
+            (f) => !(f.stopId === stop.id && f.routeId === route.id)
+          )
+        : [
+            ...prev,
+            {
+              stopId: stop.id,
+              stopName: stop.attributes?.name || stop.stopName || stop.id,
+              routeId: route.id,
+              routeName:
+                route.attributes?.long_name || route.routeName || route.id,
+            },
+          ];
+      try {
+        localStorage.setItem("mbta_favorites", JSON.stringify(next));
+      } catch (err) {
+        console.error("Failed to save favorites", err);
+      }
+      return next;
+    });
   }, []);
 
-  const toggleFavorite = (stop, route) => {
-    let newFavorites;
-    const exists = favorites.find((f) => f.stopId === stop.id);
-    if (exists) {
-      newFavorites = favorites.filter((f) => f.stopId !== stop.id);
-    } else {
-      newFavorites = [
-        ...favorites,
-        {
-          stopId: stop.id,
-          stopName: stop.attributes.name,
-          routeId: route.id,
-          routeName: route.attributes.long_name || route.id,
-        },
-      ];
-    }
-    setFavorites(newFavorites);
-    localStorage.setItem("mbta_favorites", JSON.stringify(newFavorites));
-  };
+  const isFavorite = useCallback(
+    (stopId, routeId) =>
+      favorites.some(
+        (f) => f.stopId === stopId && (!routeId || f.routeId === routeId)
+      ),
+    [favorites]
+  );
 
-  const isFavorite = (stopId) => favorites.some((f) => f.stopId === stopId);
   return { favorites, toggleFavorite, isFavorite };
 };
 
@@ -66,84 +158,115 @@ const useMbtaData = () => {
   const [favoriteAlerts, setFavoriteAlerts] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const apiFetch = async (url) => {
+  const stopsRequestIdRef = useRef(0);
+
+  const apiFetchJson = useCallback(async (url, signal) => {
     const apiKey = import.meta.env.VITE_MBTA_API_KEY;
     const headers = apiKey ? { "x-api-key": apiKey } : {};
-    return fetch(url, { headers });
-  };
-
-  const normalizeName = (name) => {
-    if (!name) return "";
-    return name
-      .toLowerCase()
-      .replace("street", "st")
-      .replace(/\s+/g, "")
-      .trim();
-  };
-
-  const isNewTrain = (routeId, label) => {
-    if (routeId !== "Red" || !label) return false;
-    const carNumber = parseInt(label.split("-")[0], 10);
-    return !isNaN(carNumber) && carNumber >= 1900;
-  };
-
-  const processPredictions = (json, stopName, routeId) => {
-    const now = new Date();
-    const tripMap = {};
-    const vehicleMap = {};
-    const vehicleDirMap = {};
-
-    if (json.included) {
-      json.included.forEach((item) => {
-        if (item.type === "trip") tripMap[item.id] = item.attributes.headsign;
-        if (item.type === "vehicle") {
-          vehicleMap[item.id] = item.attributes.label;
-          vehicleDirMap[item.id] = item.attributes.direction_id;
-        }
-      });
+    const response = await fetch(url, { headers, signal });
+    if (!response.ok) {
+      throw new Error(`MBTA API error: ${response.status}`);
     }
+    return response.json();
+  }, []);
 
-    const stopNameNorm = normalizeName(stopName);
-    const directionMap = {};
+  const processPredictions = useCallback(
+    (json, stopName, routeId) => {
+      if (!json || !Array.isArray(json.data)) return [];
+      const nowMs = Date.now();
+      const tripMap = {};
+      const vehicleMap = {};
+      const vehicleDirMap = {};
 
-    const getDirectionName = (dirId) => {
-      const route = routes.find((r) => r.id === routeId);
-      const names = route?.attributes?.direction_names || [
-        "Outbound",
-        "Inbound",
-      ];
-      const name = names[dirId] || "Unknown";
-      if (
-        (name === "South" ||
-          name === "North" ||
-          name === "West" ||
-          name === "East") &&
-        !name.includes("bound")
-      ) {
-        return `${name}bound`;
+      if (Array.isArray(json.included)) {
+        json.included.forEach((item) => {
+          if (item.type === "trip") {
+            tripMap[item.id] = item.attributes?.headsign;
+          }
+          if (item.type === "vehicle") {
+            vehicleMap[item.id] = item.attributes?.label;
+            vehicleDirMap[item.id] = item.attributes?.direction_id;
+          }
+        });
       }
-      return name;
-    };
 
-    json.data.forEach((pred) => {
-      const arrivalTime = new Date(
-        pred.attributes.arrival_time || pred.attributes.departure_time
-      );
-      if (arrivalTime > now) {
-        const diffMs = arrivalTime - now;
-        const minutes = Math.floor(diffMs / 60000);
+      const stopNameNorm = normalizeName(stopName);
+      const directionMap = {};
+
+      const getDirectionName = (dirId) => {
+        const route = routes.find((r) => r.id === routeId);
+        const names = route?.attributes?.direction_names || [
+          "Outbound",
+          "Inbound",
+        ];
+        const name = names[dirId] || "Unknown";
+        if (
+          (name === "South" ||
+            name === "North" ||
+            name === "West" ||
+            name === "East") &&
+          !name.includes("bound")
+        ) {
+          return `${name}bound`;
+        }
+        return name;
+      };
+
+      json.data.forEach((pred) => {
+        const rawArrival = pred.attributes?.arrival_time;
+        const rawDeparture = pred.attributes?.departure_time;
+        const rawStatus = pred.attributes?.status;
+
+        const arrivalMs = rawArrival ? new Date(rawArrival).getTime() : null;
+        const departureMs = rawDeparture
+          ? new Date(rawDeparture).getTime()
+          : null;
+
+        let displayMinutes = null;
+        let sortTime = null;
+
+        if (arrivalMs !== null || departureMs !== null) {
+          // If the train has already departed this stop, skip it
+          if (departureMs !== null && departureMs < nowMs) return;
+          // Terminal arrival with no departure time that already passed >30s ago
+          if (
+            departureMs === null &&
+            arrivalMs !== null &&
+            arrivalMs < nowMs - 30000
+          ) {
+            return;
+          }
+
+          const targetMs =
+            arrivalMs !== null && arrivalMs > nowMs
+              ? arrivalMs
+              : departureMs ?? arrivalMs;
+          const diffMs = Math.max(0, targetMs - nowMs);
+          const minutes = Math.floor(diffMs / 60000);
+          displayMinutes = minutes < 1 ? "Now" : `${minutes} min`;
+          sortTime = arrivalMs ?? departureMs;
+        } else if (rawStatus) {
+          displayMinutes = rawStatus;
+          sortTime = Number.MAX_SAFE_INTEGER;
+        } else {
+          return;
+        }
 
         const tripId = pred.relationships?.trip?.data?.id;
         const vehicleId = pred.relationships?.vehicle?.data?.id;
-        let headsign = tripMap[tripId] || pred.attributes.headsign || "Train";
-        let carLabel = vehicleMap[vehicleId];
-        let currentVehicleDir = vehicleDirMap[vehicleId];
+        const actualRouteId =
+          pred.relationships?.route?.data?.id || routeId;
+
+        let headsign =
+          tripMap[tripId] || pred.attributes?.headsign || "Train";
+        const carLabel = vehicleMap[vehicleId];
+        const currentVehicleDir = vehicleDirMap[vehicleId];
 
         if (headsign === "Green Line D") headsign = "Riverside";
         if (headsign === "Green Line E") headsign = "Heath St";
-        if (normalizeName(headsign) === stopNameNorm) return;
+        if (stopNameNorm && normalizeName(headsign) === stopNameNorm) return;
 
-        const dirId = pred.attributes.direction_id;
+        const dirId = pred.attributes?.direction_id;
 
         if (!directionMap[dirId]) {
           directionMap[dirId] = {
@@ -161,43 +284,42 @@ const useMbtaData = () => {
 
         directionMap[dirId].subgroups[headsign].trains.push({
           id: pred.id,
-          routeId: routeId,
+          routeId: actualRouteId,
           directionId: dirId,
           vehicleId: vehicleId,
           vehicleDirectionId: currentVehicleDir,
-          minutes: minutes < 1 ? "Now" : `${minutes} min`,
-          status: pred.attributes.status,
-          isNew: isNewTrain(routeId, carLabel),
+          minutes: displayMinutes,
+          sortTime: sortTime,
+          status: rawStatus,
+          isNew: isNewTrain(actualRouteId, carLabel),
         });
-      }
-    });
+      });
 
-    return Object.values(directionMap)
-      .map((dirGroup) => ({
-        direction: dirGroup.title,
-        directionId: dirGroup.id,
-        groups: Object.values(dirGroup.subgroups)
-          .map((sub) => ({
-            ...sub,
-            trains: sub.trains.sort((a, b) =>
-              a.minutes === "Now"
-                ? -1
-                : parseInt(a.minutes) - parseInt(b.minutes)
-            ),
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
-      }))
-      .sort((a, b) => a.directionId - b.directionId);
-  };
+      return Object.values(directionMap)
+        .map((dirGroup) => ({
+          direction: dirGroup.title,
+          directionId: dirGroup.id,
+          groups: Object.values(dirGroup.subgroups)
+            .map((sub) => ({
+              ...sub,
+              trains: sub.trains.sort((a, b) => a.sortTime - b.sortTime),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        }))
+        .sort((a, b) => a.directionId - b.directionId);
+    },
+    [routes]
+  );
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchRoutes = async () => {
       try {
-        const response = await apiFetch(
-          "https://api-v3.mbta.com/routes?filter[type]=0,1,3"
+        const json = await apiFetchJson(
+          "https://api-v3.mbta.com/routes?filter[type]=0,1,3",
+          controller.signal
         );
-        const json = await response.json();
-        const filteredRoutes = json.data.filter((r) =>
+        const filteredRoutes = (json.data || []).filter((r) =>
           SUBWAY_FILTERS.includes(r.id)
         );
         filteredRoutes.sort(
@@ -205,188 +327,199 @@ const useMbtaData = () => {
         );
         setRoutes(filteredRoutes);
       } catch (err) {
-        console.error("Failed routes", err);
+        if (err.name !== "AbortError") {
+          console.error("Failed routes", err);
+        }
       }
     };
     fetchRoutes();
-  }, []);
+    return () => controller.abort();
+  }, [apiFetchJson]);
 
-  const fetchStops = async (routeId) => {
-    setLoading(true);
-    setStops([]);
-    setPredictionGroups([]);
-    try {
-      const response = await apiFetch(
-        `https://api-v3.mbta.com/stops?filter[route]=${routeId}`
-      );
-      const json = await response.json();
-      return json.data;
-    } catch (err) {
-      console.error(err);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const TRUNK_STATIONS = {
-    Copley: "Green-B,Green-C,Green-D,Green-E",
-    Arlington: "Green-B,Green-C,Green-D,Green-E",
-    Boylston: "Green-B,Green-C,Green-D,Green-E",
-    "Park Street": "Green-B,Green-C,Green-D,Green-E",
-    "Government Center": "Green-B,Green-C,Green-D,Green-E",
-    Haymarket: "Green-D,Green-E",
-    "North Station": "Green-D,Green-E",
-    "Science Park/West End": "Green-D,Green-E",
-    Lechmere: "Green-D,Green-E",
-    Kenmore: "Green-B,Green-C,Green-D",
-    "Hynes Convention Center": "Green-B,Green-C,Green-D",
-  };
-
-  const fetchPredictions = async (
-    routeId,
-    stopId,
-    currentStopsList = stops
-  ) => {
-    try {
-      const currentStop = currentStopsList.find((s) => s.id === stopId);
-      const stopName = currentStop ? currentStop.attributes.name : "";
-      let routeFilter = routeId;
-      if (TRUNK_STATIONS[stopName]) {
-        const trunkRoutes = TRUNK_STATIONS[stopName];
-        if (trunkRoutes.includes(routeId)) routeFilter = trunkRoutes;
+  const fetchStops = useCallback(
+    async (routeId) => {
+      const requestId = ++stopsRequestIdRef.current;
+      setLoading(true);
+      setStops([]);
+      setPredictionGroups([]);
+      try {
+        const json = await apiFetchJson(
+          `https://api-v3.mbta.com/stops?filter[route]=${routeId}`
+        );
+        const newStops = json.data || [];
+        if (requestId === stopsRequestIdRef.current) {
+          setStops(newStops);
+        }
+        return newStops;
+      } catch (err) {
+        console.error("Failed to fetch stops", err);
+        return [];
+      } finally {
+        if (requestId === stopsRequestIdRef.current) {
+          setLoading(false);
+        }
       }
-      const response = await apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
-      );
-      const json = await response.json();
-      const processed = processPredictions(json, stopName, routeId);
-      setPredictionGroups(processed);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    },
+    [apiFetchJson]
+  );
 
-  const fetchAllFavorites = async (favoritesList) => {
-    if (!favoritesList || favoritesList.length === 0) return;
-    const promises = favoritesList.map((fav) => {
-      let routeFilter = fav.routeId;
-      if (TRUNK_STATIONS[fav.stopName]) {
-        const trunkRoutes = TRUNK_STATIONS[fav.stopName];
-        if (trunkRoutes.includes(fav.routeId)) routeFilter = trunkRoutes;
+  const fetchPredictions = useCallback(
+    async (routeId, stopId, stopName = "", signal) => {
+      try {
+        const routeFilter = getTrunkRouteFilter(stopName, routeId);
+        const json = await apiFetchJson(
+          `https://api-v3.mbta.com/predictions?filter[stop]=${stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`,
+          signal
+        );
+        const processed = processPredictions(json, stopName, routeId);
+        setPredictionGroups(processed);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch predictions", err);
+        }
       }
-      return apiFetch(
-        `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`
-      )
-        .then((res) => res.json())
-        .then((json) => ({
-          id: fav.stopId,
-          data: processPredictions(json, fav.stopName, fav.routeId),
-        }))
-        .catch((err) => ({ id: fav.stopId, data: [] }));
-    });
-    const results = await Promise.all(promises);
-    const newMap = {};
-    results.forEach((res) => {
-      newMap[res.id] = res.data;
-    });
-    setFavoritePredictions(newMap);
-  };
+    },
+    [apiFetchJson, processPredictions]
+  );
 
-  const fetchVehicles = async (routeId, directionId) => {
-    try {
-      const response = await apiFetch(
-        `https://api-v3.mbta.com/vehicles?filter[route]=${routeId}&include=stop`
-      );
-      const json = await response.json();
-      const stopParentMap = {};
-      if (json.included) {
-        json.included.forEach((item) => {
-          if (item.type === "stop") {
-            const parentId = item.relationships?.parent_station?.data?.id;
-            stopParentMap[item.id] = parentId || item.id;
+  const fetchAllFavorites = useCallback(
+    async (favoritesList, signal) => {
+      if (!favoritesList || favoritesList.length === 0) return;
+      const promises = favoritesList.map((fav) => {
+        const favKey = getFavoriteKey(fav.routeId, fav.stopId);
+        const routeFilter = getTrunkRouteFilter(fav.stopName, fav.routeId);
+        return apiFetchJson(
+          `https://api-v3.mbta.com/predictions?filter[stop]=${fav.stopId}&filter[route]=${routeFilter}&sort=arrival_time&include=trip,vehicle`,
+          signal
+        )
+          .then((json) => ({
+            key: favKey,
+            ok: true,
+            data: processPredictions(json, fav.stopName, fav.routeId),
+          }))
+          .catch((err) => {
+            if (err.name !== "AbortError") {
+              console.error(`Failed predictions for ${favKey}`, err);
+            }
+            return { key: favKey, ok: false, data: null };
+          });
+      });
+      const results = await Promise.all(promises);
+      setFavoritePredictions((prev) => {
+        const next = { ...prev };
+        results.forEach((res) => {
+          if (res.ok) {
+            next[res.key] = res.data;
           }
         });
-      }
-      const activeTrains = json.data
-        .filter((v) => v.attributes.direction_id === directionId)
-        .map((v) => {
-          const rawStopId = v.relationships?.stop?.data?.id;
-          const parentStationId = stopParentMap[rawStopId] || rawStopId;
-          return {
-            id: v.id,
-            status: v.attributes.current_status,
-            stopId: parentStationId,
-            label: v.attributes.label,
-            isNew: isNewTrain(routeId, v.attributes.label),
-          };
-        });
-      setVehicles(activeTrains);
-    } catch (err) {
-      console.error("Failed to fetch vehicles", err);
-    }
-  };
+        return next;
+      });
+    },
+    [apiFetchJson, processPredictions]
+  );
 
-  const filterActiveServiceAlerts = (data) => {
-    return data.filter((a) => {
-      const isLifecycleActive = ["NEW", "ONGOING", "ONGOING_UPCOMING"].includes(
-        a.attributes.lifecycle
-      );
-      const nonServiceEffects = [
-        "ACCESS_ISSUE",
-        "FACILITY_ISSUE",
-        "BIKE_ISSUE",
-        "PARKING_ISSUE",
-        "PARKING_CLOSURE",
-        "STATION_ISSUE",
-        "ELEVATOR_CLOSURE",
-        "ESCALATOR_CLOSURE",
-        "POLICY_CHANGE",
-      ];
-      return isLifecycleActive && !nonServiceEffects.includes(a.attributes.effect);
-    });
-  };
-
-  const fetchAlerts = async (routeId) => {
-    try {
-      const response = await apiFetch(
-        `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`
-      );
-      const json = await response.json();
-      setAlerts(filterActiveServiceAlerts(json.data));
-    } catch (err) {
-      console.error("Failed to fetch alerts", err);
-    }
-  };
-
-  const fetchFavoriteAlerts = async (favoritesList) => {
-    if (!favoritesList || favoritesList.length === 0) return;
-    const uniqueRouteIds = [...new Set(favoritesList.map((f) => f.routeId))];
-    const promises = uniqueRouteIds.map(async (routeId) => {
+  const fetchVehicles = useCallback(
+    async (routeId, directionId, signal) => {
       try {
-        const response = await apiFetch(
-          `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`
+        const json = await apiFetchJson(
+          `https://api-v3.mbta.com/vehicles?filter[route]=${routeId}&include=stop`,
+          signal
         );
-        const json = await response.json();
-        const activeAlerts = filterActiveServiceAlerts(json.data);
-        return { routeId, hasAlert: activeAlerts.length > 0 };
+        const stopParentMap = {};
+        if (Array.isArray(json.included)) {
+          json.included.forEach((item) => {
+            if (item.type === "stop") {
+              const parentId = item.relationships?.parent_station?.data?.id;
+              stopParentMap[item.id] = parentId || item.id;
+            }
+          });
+        }
+        const activeTrains = (json.data || [])
+          .filter((v) => v.attributes?.direction_id === directionId)
+          .map((v) => {
+            const rawStopId = v.relationships?.stop?.data?.id;
+            const parentStationId = stopParentMap[rawStopId] || rawStopId;
+            return {
+              id: v.id,
+              status: v.attributes?.current_status,
+              stopId: parentStationId,
+              label: v.attributes?.label,
+              isNew: isNewTrain(routeId, v.attributes?.label),
+            };
+          });
+        setVehicles(activeTrains);
       } catch (err) {
-        console.error("Failed to fetch alerts for " + routeId, err);
-        return { routeId, hasAlert: false };
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch vehicles", err);
+        }
       }
-    });
+    },
+    [apiFetchJson]
+  );
 
-    const results = await Promise.all(promises);
-    const newAlertsMap = {};
-    results.forEach((res) => {
-      newAlertsMap[res.routeId] = res.hasAlert;
-    });
-    setFavoriteAlerts(newAlertsMap);
-  };
+  const fetchAlerts = useCallback(
+    async (routeId, signal) => {
+      try {
+        const json = await apiFetchJson(
+          `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`,
+          signal
+        );
+        setAlerts(filterActiveServiceAlerts(json.data));
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch alerts", err);
+        }
+      }
+    },
+    [apiFetchJson]
+  );
+
+  const fetchFavoriteAlerts = useCallback(
+    async (favoritesList, signal) => {
+      if (!favoritesList || favoritesList.length === 0) return;
+
+      const routeSet = new Set();
+      favoritesList.forEach((fav) => {
+        const routeFilter = getTrunkRouteFilter(fav.stopName, fav.routeId);
+        routeFilter.split(",").forEach((r) => routeSet.add(r));
+      });
+
+      const allRoutes = [...routeSet];
+      if (allRoutes.length === 0) return;
+
+      try {
+        const json = await apiFetchJson(
+          `https://api-v3.mbta.com/alerts?filter[route]=${allRoutes.join(",")}`,
+          signal
+        );
+        const activeAlerts = filterActiveServiceAlerts(json.data);
+        const nextAlertsMap = {};
+
+        favoritesList.forEach((fav) => {
+          const favKey = getFavoriteKey(fav.routeId, fav.stopId);
+          const relevantRoutes = getTrunkRouteFilter(
+            fav.stopName,
+            fav.routeId
+          ).split(",");
+          const matchingAlerts = activeAlerts.filter((alert) => {
+            const entities = alert.attributes?.informed_entity || [];
+            return entities.some((e) => relevantRoutes.includes(e.route));
+          });
+          nextAlertsMap[favKey] = matchingAlerts;
+        });
+
+        setFavoriteAlerts(nextAlertsMap);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch favorite alerts", err);
+        }
+      }
+    },
+    [apiFetchJson]
+  );
 
   return {
     routes,
-    setStops,
     stops,
     predictionGroups,
     favoritePredictions,
@@ -399,6 +532,9 @@ const useMbtaData = () => {
     fetchVehicles,
     fetchAlerts,
     fetchFavoriteAlerts,
+    setPredictionGroups,
+    setVehicles,
+    setAlerts,
     loading,
   };
 };
@@ -430,8 +566,10 @@ function App() {
     fetchVehicles,
     fetchAlerts,
     fetchFavoriteAlerts,
+    setPredictionGroups,
+    setVehicles,
+    setAlerts,
     loading,
-    setStops,
   } = useMbtaData();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
@@ -441,75 +579,119 @@ function App() {
   const [mapDirection, setMapDirection] = useState(0);
   const [highlightedTrainId, setHighlightedTrainId] = useState(null);
 
-  useEffect(() => {
-    let intervalId;
-    const poll = () => {
-      if (currentTab === "list" && selectedRoute && selectedStop) {
-        fetchPredictions(selectedRoute.id, selectedStop.id);
-      }
-      if (currentTab === "favorites" && favorites.length > 0) {
-        fetchAllFavorites(favorites);
-        fetchFavoriteAlerts(favorites);
-      }
-      if (currentTab === "map" && selectedRoute) {
-        fetchVehicles(selectedRoute.id, mapDirection);
-      }
-    };
-    poll();
-    intervalId = setInterval(poll, 4000);
-    return () => clearInterval(intervalId);
-  }, [currentTab, selectedRoute, selectedStop, mapDirection, favorites]);
-
-  useEffect(() => {
-    if (selectedRoute) {
-      fetchAlerts(selectedRoute.id);
-    }
-  }, [selectedRoute]);
-
-  // --- NEW: AUTO-CLEAR HIGHLIGHT ON TAB CHANGE ---
-  useEffect(() => {
-    if (currentTab !== "map") {
+  const handleTabChange = (tab) => {
+    setCurrentTab(tab);
+    if (tab !== "map") {
       setHighlightedTrainId(null);
     }
-  }, [currentTab]);
+  };
 
-  // ... (Handlers unchanged) ...
+  // Poll predictions and vehicles when tab is visible
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const poll = () => {
+      if (document.visibilityState === "hidden") return;
+      if (currentTab === "list" && selectedRoute && selectedStop) {
+        fetchPredictions(
+          selectedRoute.id,
+          selectedStop.id,
+          selectedStop.attributes?.name || "",
+          controller.signal
+        );
+      } else if (currentTab === "favorites" && favorites.length > 0) {
+        fetchAllFavorites(favorites, controller.signal);
+      } else if (currentTab === "map" && selectedRoute) {
+        fetchVehicles(selectedRoute.id, mapDirection, controller.signal);
+      }
+    };
+
+    poll();
+    const intervalId = setInterval(poll, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      controller.abort();
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [
+    currentTab,
+    selectedRoute,
+    selectedStop,
+    mapDirection,
+    favorites,
+    fetchPredictions,
+    fetchAllFavorites,
+    fetchVehicles,
+  ]);
+
+  // Poll favorite alerts at a slower 60s cadence in a single batched request
+  useEffect(() => {
+    if (currentTab !== "favorites" || favorites.length === 0) return;
+    const controller = new AbortController();
+
+    const pollAlerts = () => {
+      if (document.visibilityState === "hidden") return;
+      fetchFavoriteAlerts(favorites, controller.signal);
+    };
+
+    pollAlerts();
+    const intervalId = setInterval(pollAlerts, ALERT_POLL_INTERVAL_MS);
+    return () => {
+      controller.abort();
+      clearInterval(intervalId);
+    };
+  }, [currentTab, favorites, fetchFavoriteAlerts]);
+
+  // Fetch route service alerts when selectedRoute changes
+  useEffect(() => {
+    if (!selectedRoute) return;
+    const controller = new AbortController();
+    fetchAlerts(selectedRoute.id, controller.signal);
+    return () => controller.abort();
+  }, [selectedRoute, fetchAlerts]);
+
   const handleRouteSelect = async (e) => {
     const routeId = e.target.value;
-    const routeObj = routes.find((r) => r.id === routeId);
+    const routeObj = routes.find((r) => r.id === routeId) || null;
     setSelectedRoute(routeObj);
     setSelectedStop(null);
+    setPredictionGroups([]);
+    setVehicles([]);
+    setAlerts([]);
     if (routeId) {
-      const newStops = await fetchStops(routeId);
-      setStops(newStops);
+      await fetchStops(routeId);
     }
   };
 
   const handleStopSelect = (e) => {
     const stopId = e.target.value;
-    const stopObj = stops.find((s) => s.id === stopId);
+    const stopObj = stops.find((s) => s.id === stopId) || null;
     setSelectedStop(stopObj);
+    setPredictionGroups([]);
   };
 
   const handleMapStationClick = (stop) => {
     setSelectedStop(stop);
-    setCurrentTab("list");
+    handleTabChange("list");
   };
 
   // --- TRAIN CLICK HANDLER ---
   const handleTrainClick = async (train) => {
-    if (!train.vehicleId) {
-      console.log("No vehicle ID available for this train");
-      return;
-    }
+    if (!train.vehicleId) return;
 
     const routeObj = routes.find((r) => r.id === train.routeId);
-    if (routeObj) {
+    if (routeObj && (!selectedRoute || selectedRoute.id !== train.routeId)) {
       setSelectedRoute(routeObj);
-      if (!selectedRoute || selectedRoute.id !== train.routeId) {
-        const newStops = await fetchStops(train.routeId);
-        setStops(newStops);
-      }
+      setSelectedStop(null);
+      await fetchStops(train.routeId);
     }
 
     const dirToSet =
@@ -536,8 +718,9 @@ function App() {
         {currentTab === "list" && (
           <>
             <div className="selector-group">
-              <label>Select Line</label>
+              <label htmlFor="search-route-select">Select Line</label>
               <select
+                id="search-route-select"
                 onChange={handleRouteSelect}
                 value={selectedRoute?.id || ""}
               >
@@ -553,12 +736,14 @@ function App() {
             </div>
 
             {alerts.length > 0 && (
-              <div className="alert-container slide-in">
+              <div className="alert-container fade-in">
                 {alerts.map((alert) => (
                   <div key={alert.id} className="alert-box">
                     <span className="alert-icon">⚠️</span>
                     <div className="alert-content">
-                      <strong>{alert.attributes.service_effect || "Service Alert"}</strong>
+                      <strong>
+                        {alert.attributes.service_effect || "Service Alert"}
+                      </strong>
                       <p>{alert.attributes.header}</p>
                     </div>
                   </div>
@@ -567,14 +752,18 @@ function App() {
             )}
 
             {selectedRoute && (
-              <div className="selector-group slide-in">
-                <label>Select Station</label>
+              <div className="selector-group fade-in">
+                <label htmlFor="search-stop-select">Select Station</label>
                 <select
+                  id="search-stop-select"
                   onChange={handleStopSelect}
                   value={selectedStop?.id || ""}
+                  disabled={loading && stops.length === 0}
                 >
                   <option value="" disabled>
-                    -- Choose a Station --
+                    {loading && stops.length === 0
+                      ? "Loading stations..."
+                      : "-- Choose a Station --"}
                   </option>
                   {stops.map((stop) => (
                     <option key={stop.id} value={stop.id}>
@@ -586,11 +775,11 @@ function App() {
             )}
 
             {selectedStop && (
-              <div className="predictions-container slide-in">
+              <div className="predictions-container fade-in">
                 <PredictionCard
                   title={selectedStop.attributes.name}
                   groups={predictionGroups}
-                  isFav={isFavorite(selectedStop.id)}
+                  isFav={isFavorite(selectedStop.id, selectedRoute?.id)}
                   onStarClick={() =>
                     toggleFavorite(selectedStop, selectedRoute)
                   }
@@ -618,8 +807,9 @@ function App() {
         {currentTab === "map" && (
           <>
             <div className="selector-group">
-              <label>Select Line</label>
+              <label htmlFor="map-route-select">Select Line</label>
               <select
+                id="map-route-select"
                 onChange={handleRouteSelect}
                 value={selectedRoute?.id || ""}
               >
@@ -635,12 +825,14 @@ function App() {
             </div>
 
             {alerts.length > 0 && (
-              <div className="alert-container slide-in">
+              <div className="alert-container fade-in">
                 {alerts.map((alert) => (
                   <div key={alert.id} className="alert-box">
                     <span className="alert-icon">⚠️</span>
                     <div className="alert-content">
-                      <strong>{alert.attributes.service_effect || "Service Alert"}</strong>
+                      <strong>
+                        {alert.attributes.service_effect || "Service Alert"}
+                      </strong>
                       <p>{alert.attributes.header}</p>
                     </div>
                   </div>
@@ -665,22 +857,25 @@ function App() {
 
       <nav className="bottom-nav">
         <button
+          type="button"
           className={`nav-item ${currentTab === "list" ? "active" : ""}`}
-          onClick={() => setCurrentTab("list")}
+          onClick={() => handleTabChange("list")}
         >
           <span className="nav-icon">🔍</span>
           <span className="nav-label">Search</span>
         </button>
         <button
+          type="button"
           className={`nav-item ${currentTab === "favorites" ? "active" : ""}`}
-          onClick={() => setCurrentTab("favorites")}
+          onClick={() => handleTabChange("favorites")}
         >
           <span className="nav-icon">★</span>
           <span className="nav-label">Favorites</span>
         </button>
         <button
+          type="button"
           className={`nav-item ${currentTab === "map" ? "active" : ""}`}
-          onClick={() => setCurrentTab("map")}
+          onClick={() => handleTabChange("map")}
         >
           <span className="nav-icon">🗺️</span>
           <span className="nav-label">Map</span>

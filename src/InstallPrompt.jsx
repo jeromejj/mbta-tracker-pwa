@@ -1,39 +1,47 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import "./InstallPrompt.css";
+
+const DISMISS_STORAGE_KEY = "mbta_install_dismissed";
+
+const detectPlatform = () => {
+  if (typeof window === "undefined") {
+    return { isStandalone: false, isIOS: false, isFirefox: false };
+  }
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
+  const ua = navigator.userAgent || "";
+  const isIOS =
+    (/iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) &&
+    !window.MSStream;
+  const isFirefox = /Firefox/.test(ua) && /Android/.test(ua);
+
+  return { isStandalone, isIOS, isFirefox };
+};
 
 const InstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isFirefox, setIsFirefox] = useState(false);
+  const [{ isStandalone, isIOS, isFirefox }] = useState(detectPlatform);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed (standalone mode)
-    const isStandalone = window.matchMedia(
-      "(display-mode: standalone)"
-    ).matches;
     if (isStandalone) return;
 
-    const ua = navigator.userAgent;
-
-    // 1. Detect iOS
-    const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-    if (isIosDevice) {
-      setIsIOS(true);
-      setTimeout(() => setIsVisible(true), 2000); // Small delay for effect
-      return;
+    try {
+      if (localStorage.getItem(DISMISS_STORAGE_KEY) === "true") {
+        return;
+      }
+    } catch {
+      // Ignore storage access errors in private browsing
     }
 
-    // 2. Detect Firefox on Android (No 'beforeinstallprompt' support)
-    const isFirefoxAndroid = /Firefox/.test(ua) && /Android/.test(ua);
-    if (isFirefoxAndroid) {
-      setIsFirefox(true);
-      setTimeout(() => setIsVisible(true), 2000);
-      return;
+    if (isIOS || isFirefox) {
+      const timer = setTimeout(() => setIsVisible(true), 2000);
+      return () => clearTimeout(timer);
     }
 
-    // 3. Listen for standard 'beforeinstallprompt'
-    // (Chrome/Edge/Samsung Internet)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -41,26 +49,29 @@ const InstallPrompt = () => {
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt
       );
     };
-  }, []);
+  }, [isStandalone, isIOS, isFirefox]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response: ${outcome}`);
+    await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setIsVisible(false);
   };
 
   const handleClose = () => {
     setIsVisible(false);
+    try {
+      localStorage.setItem(DISMISS_STORAGE_KEY, "true");
+    } catch {
+      // Ignore storage access errors
+    }
   };
 
   if (!isVisible) return null;
@@ -69,9 +80,8 @@ const InstallPrompt = () => {
     <div className="install-prompt">
       <div className="install-content">
         <div className="install-text">
-          <h3>Install T Tracker for better experience</h3>
+          <h3>Install T Tracker for a better experience</h3>
 
-          {/* iOS Instructions */}
           {isIOS && (
             <p>
               Tap the <strong>Share</strong> button and select{" "}
@@ -79,7 +89,6 @@ const InstallPrompt = () => {
             </p>
           )}
 
-          {/* Firefox Android Instructions */}
           {isFirefox && (
             <p>
               Tap the <strong>Menu</strong> icon{" "}
@@ -88,20 +97,24 @@ const InstallPrompt = () => {
             </p>
           )}
 
-          {/* Standard Chrome/Edge Message */}
-          {!isIOS && !isFirefox && <p></p>}
+          {!isIOS && !isFirefox && (
+            <p>Add to your home screen for quick one-tap access.</p>
+          )}
         </div>
       </div>
 
       <div className="install-actions">
-        {/* Only show the magic button for Chrome/Edge/Samsung */}
         {!isIOS && !isFirefox && (
-          <button className="install-btn" onClick={handleInstallClick}>
+          <button
+            type="button"
+            className="install-btn"
+            onClick={handleInstallClick}
+          >
             Install
           </button>
         )}
 
-        <button className="close-btn" onClick={handleClose}>
+        <button type="button" className="close-btn" onClick={handleClose}>
           {isIOS || isFirefox ? "Close" : "Not Now"}
         </button>
       </div>

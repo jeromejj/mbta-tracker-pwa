@@ -1,71 +1,138 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./Favorite.css";
+
+const getFavoriteKey = (routeId, stopId) => `${routeId}:${stopId}`;
 
 // --- REUSABLE COMPONENT: PREDICTION CARD ---
 export const PredictionCard = ({
   title,
+  subtitle,
   groups,
   onStarClick,
   onTrainClick,
   isFav,
   lineColor,
   extra,
-}) => (
-  <div
-    className="destination-card"
-    style={{ borderLeft: `6px solid ${lineColor}` }}
-  >
-    <div className="predictions-header">
-      <h2>
-        {title}
-        {onStarClick && (
-          <button className="star-btn" onClick={onStarClick}>
-            {isFav ? "★" : "☆"}
-          </button>
-        )}
-      </h2>
-      {extra}
-    </div>
+  alerts,
+  loading,
+}) => {
+  const [showAlerts, setShowAlerts] = useState(false);
+  const hasAlerts = alerts && alerts.length > 0;
 
-    <div className="destinations-list">
-      {groups && groups.length > 0 ? (
-        groups.map((dirGroup) => (
-          <div key={dirGroup.directionId} className="direction-section">
-            <h4 className="direction-label">{dirGroup.direction}</h4>
-            {dirGroup.groups.map((group) => (
-              <div key={group.name} className="destination-group">
-                <h3>{group.name}</h3>
-                <div className="train-row-container">
-                  {group.trains.map((t) => (
-                    <div
-                      key={t.id}
-                      className="train-pill"
-                      // CLICK HANDLER
-                      onClick={() => onTrainClick && onTrainClick(t)}
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${lineColor}, white 90%)`,
-                        borderColor: lineColor,
-                        color: lineColor,
-                        cursor: "pointer", // Show interactivity
-                      }}
-                    >
-                      <span className="time">
-                        {t.minutes}
-                        {t.isNew && <span className="new-badge">✨</span>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+  return (
+    <div
+      className="destination-card"
+      style={{ borderLeft: `6px solid ${lineColor}` }}
+    >
+      <div className="predictions-header">
+        <div className="predictions-title-group">
+          <h2>
+            <span>{title}</span>
+            {hasAlerts && (
+              <button
+                type="button"
+                className="alert-icon-fav"
+                title="Toggle Service Alert details"
+                aria-label="Toggle Service Alert details"
+                aria-expanded={showAlerts}
+                onClick={() => setShowAlerts((prev) => !prev)}
+              >
+                ⚠️
+              </button>
+            )}
+            {onStarClick && (
+              <button
+                type="button"
+                className="star-btn"
+                aria-label={
+                  isFav ? "Remove station from favorites" : "Add station to favorites"
+                }
+                onClick={onStarClick}
+              >
+                {isFav ? "★" : "☆"}
+              </button>
+            )}
+          </h2>
+          {subtitle && (
+            <span
+              className="route-badge"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${lineColor}, white 88%)`,
+                color: lineColor,
+                borderColor: `color-mix(in srgb, ${lineColor}, white 60%)`,
+              }}
+            >
+              {subtitle}
+            </span>
+          )}
+        </div>
+        {extra}
+      </div>
+
+      {hasAlerts && showAlerts && (
+        <div className="fav-alerts-panel">
+          {alerts.map((alert) => (
+            <div key={alert.id} className="alert-box">
+              <span className="alert-icon">⚠️</span>
+              <div className="alert-content">
+                <strong>
+                  {alert.attributes?.service_effect || "Service Alert"}
+                </strong>
+                <p>{alert.attributes?.header}</p>
               </div>
-            ))}
-          </div>
-        ))
-      ) : (
-        <p className="no-data">No trains predicted</p>
+            </div>
+          ))}
+        </div>
       )}
+
+      <div className="destinations-list">
+        {loading && (!groups || groups.length === 0) ? (
+          <p className="no-data">Loading predictions...</p>
+        ) : groups && groups.length > 0 ? (
+          groups.map((dirGroup) => (
+            <div key={dirGroup.directionId} className="direction-section">
+              <h4 className="direction-label">{dirGroup.direction}</h4>
+              {dirGroup.groups.map((group) => (
+                <div key={group.name} className="destination-group">
+                  <h3>{group.name}</h3>
+                  <div className="train-row-container">
+                    {group.trains.map((t) => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        className="train-pill"
+                        onClick={() => onTrainClick && onTrainClick(t)}
+                        disabled={!t.vehicleId}
+                        title={
+                          t.vehicleId
+                            ? "View this train on the live map"
+                            : "Live vehicle position unavailable"
+                        }
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${lineColor}, white 90%)`,
+                          borderColor: lineColor,
+                          color: lineColor,
+                          cursor: t.vehicleId ? "pointer" : "default",
+                        }}
+                      >
+                        <span className="time">
+                          {t.minutes}
+                          {t.isNew && <span className="new-badge">✨</span>}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        ) : (
+          <p className="no-data">No trains predicted</p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- MAIN FAVORITES VIEW ---
 const FavoritesTab = ({
@@ -93,8 +160,8 @@ const FavoritesTab = ({
     return () => observer.disconnect();
   }, []);
 
-  const scrollToFav = (stopId) => {
-    const el = document.getElementById(`fav-${stopId}`);
+  const scrollToFav = (favKey) => {
+    const el = document.getElementById(`fav-${favKey}`);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -104,7 +171,7 @@ const FavoritesTab = ({
         <div className="no-data-msg">
           <p>No favorites yet.</p>
           <small>
-            Go to the Search or Map tab and tap the star (★) to save stations
+            Go to the Search or Map tab and tap the star (☆) to save stations
             here.
           </small>
         </div>
@@ -123,51 +190,58 @@ const FavoritesTab = ({
       >
         <div className="favorites-label">QUICK JUMP</div>
         <div className="favorites-list">
-          {favorites.map((fav) => (
-            <button
-              key={fav.stopId}
-              className="fav-chip"
-              onClick={() => scrollToFav(fav.stopId)}
-              style={{ "--chip-color": getLineColor(fav.routeId) }}
-            >
-              <span className="fav-route-dot"></span>
-              {fav.stopName}
-            </button>
-          ))}
+          {favorites.map((fav) => {
+            const favKey = getFavoriteKey(fav.routeId, fav.stopId);
+            return (
+              <button
+                type="button"
+                key={favKey}
+                className="fav-chip"
+                onClick={() => scrollToFav(favKey)}
+                style={{ "--chip-color": getLineColor(fav.routeId) }}
+              >
+                <span className="fav-route-dot"></span>
+                {fav.stopName}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="fav-cards-list">
-        {favorites.map((fav) => (
-          <div
-            key={fav.stopId}
-            id={`fav-${fav.stopId}`}
-            className="fav-section"
-          >
-            <PredictionCard
-              title={
-                <>
-                  {fav.stopName}
-                  {favoriteAlerts && favoriteAlerts[fav.routeId] && (
-                    <span className="alert-icon-fav" title="Service Alert">
-                      ⚠️
-                    </span>
-                  )}
-                </>
-              }
-              groups={favoritePredictions[fav.stopId]}
-              isFav={true}
-              onStarClick={() =>
-                toggleFavorite(
-                  { id: fav.stopId, attributes: { name: fav.stopName } },
-                  { id: fav.routeId }
-                )
-              }
-              onTrainClick={onTrainClick} // <--- Pass down
-              lineColor={getLineColor(fav.routeId)}
-            />
-          </div>
-        ))}
+        {favorites.map((fav) => {
+          const favKey = getFavoriteKey(fav.routeId, fav.stopId);
+          const alertsForFav = favoriteAlerts?.[favKey] || [];
+          return (
+            <div
+              key={favKey}
+              id={`fav-${favKey}`}
+              className="fav-section"
+            >
+              <PredictionCard
+                title={fav.stopName}
+                subtitle={fav.routeName || fav.routeId}
+                alerts={alertsForFav}
+                groups={
+                  favoritePredictions[favKey] ??
+                  favoritePredictions[fav.stopId]
+                }
+                isFav={true}
+                onStarClick={() =>
+                  toggleFavorite(
+                    { id: fav.stopId, attributes: { name: fav.stopName } },
+                    {
+                      id: fav.routeId,
+                      attributes: { long_name: fav.routeName || fav.routeId },
+                    }
+                  )
+                }
+                onTrainClick={onTrainClick}
+                lineColor={getLineColor(fav.routeId)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

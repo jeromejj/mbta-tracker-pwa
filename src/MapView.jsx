@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./MapView.css";
 
 // --- CONFIGURATION ---
@@ -45,24 +45,43 @@ const MapStopRow = ({
   highlightedTrainId,
 }) => {
   const trainsHere = vehicles.filter((v) => v.stopId === stop.id);
+  const handleKeyDown = (e) => {
+    if ((e.key === "Enter" || e.key === " ") && onStationSelect) {
+      e.preventDefault();
+      onStationSelect(stop);
+    }
+  };
+
   return (
     <div
       className="map-stop-row"
       ref={innerRef}
+      role="button"
+      tabIndex={0}
       onClick={() => onStationSelect && onStationSelect(stop)}
+      onKeyDown={handleKeyDown}
     >
       <div className="map-marker-area">
         <div className="stop-dot"></div>
-        {trainsHere.map((train) => (
-          <div
-            key={train.id}
-            className={`train-marker ${
-              train.status === "IN_TRANSIT_TO" ? "moving" : ""
-            } ${train.id === highlightedTrainId ? "highlighted" : ""}`}
-          >
-            <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
-          </div>
-        ))}
+        {trainsHere.map((train, idx) => {
+          const offsetPx = -idx * 14;
+          return (
+            <div
+              key={train.id}
+              title={train.label ? `Train #${train.label}` : "Train"}
+              style={
+                offsetPx !== 0
+                  ? { marginLeft: `${-14 + offsetPx}px` }
+                  : undefined
+              }
+              className={`train-marker ${
+                train.status === "IN_TRANSIT_TO" ? "moving" : ""
+              } ${train.id === highlightedTrainId ? "highlighted" : ""}`}
+            >
+              <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="map-stop-name">{stop.attributes.name}</div>
     </div>
@@ -70,26 +89,32 @@ const MapStopRow = ({
 };
 
 // --- SVG TRACK COMPONENT ---
-const TrackSvg = ({ type, targets }) => {
+const TrackSvg = ({ type, ashmontRef, braintreeRef, stopsCount }) => {
   const [ref, { width, height }] = useContainerSize();
   const [targetsY, setTargetsY] = useState({ ashmont: 0, braintree: 0 });
 
   useEffect(() => {
-    if (!targets || !ref.current) return;
+    if ((!ashmontRef && !braintreeRef) || !ref.current) return;
 
     const measureTargets = () => {
+      if (!ref.current) return;
       const containerRect = ref.current.getBoundingClientRect();
-      const newY = { ashmont: height - 25, braintree: height - 25 };
+      const defaultY = type === "merge-inbound" ? 25 : height - 25;
+      const newY = { ashmont: defaultY, braintree: defaultY };
 
-      if (targets.ashmont?.current) {
-        const rect = targets.ashmont.current.getBoundingClientRect();
+      if (ashmontRef?.current) {
+        const rect = ashmontRef.current.getBoundingClientRect();
         newY.ashmont = rect.top - containerRect.top + rect.height / 2;
       }
-      if (targets.braintree?.current) {
-        const rect = targets.braintree.current.getBoundingClientRect();
+      if (braintreeRef?.current) {
+        const rect = braintreeRef.current.getBoundingClientRect();
         newY.braintree = rect.top - containerRect.top + rect.height / 2;
       }
-      setTargetsY(newY);
+      setTargetsY((prev) =>
+        prev.ashmont === newY.ashmont && prev.braintree === newY.braintree
+          ? prev
+          : newY
+      );
     };
 
     measureTargets();
@@ -100,13 +125,13 @@ const TrackSvg = ({ type, targets }) => {
       window.removeEventListener("resize", measureTargets);
       clearTimeout(timer);
     };
-  }, [width, height, targets]);
+  }, [width, height, type, ref, ashmontRef, braintreeRef, stopsCount]);
 
   if (width === 0 || height === 0)
     return <div className="track-svg-layer" ref={ref} />;
 
   // --- GEOMETRY CONFIGURATION ---
-  const STANDARD_AXIS = 30;
+  const STANDARD_AXIS = 42;
   const TRUNK_AXIS = width * 0.4;
   const ASHMONT_AXIS = width * 0.2;
   const BRAINTREE_AXIS = width * 0.6;
@@ -142,13 +167,15 @@ const TrackSvg = ({ type, targets }) => {
     `);
   } else if (type === "merge-inbound") {
     const endX = TRUNK_AXIS;
+    const ashmontStart = targetsY.ashmont || PAD;
+    const braintreeStart = targetsY.braintree || PAD;
     paths.push(`
-      M ${ASHMONT_AXIS},${PAD}
+      M ${ASHMONT_AXIS},${ashmontStart}
       L ${ASHMONT_AXIS},${height - SPLIT_H}
       C ${ASHMONT_AXIS},${height - 20} ${endX},${height - 25} ${endX},${height}
     `);
     paths.push(`
-      M ${BRAINTREE_AXIS},${PAD}
+      M ${BRAINTREE_AXIS},${braintreeStart}
       L ${BRAINTREE_AXIS},${height - SPLIT_H}
       C ${BRAINTREE_AXIS},${height - 20} ${endX},${
       height - 25
@@ -186,27 +213,33 @@ const MapView = ({
   onStationSelect,
   highlightedTrainId,
 }) => {
+  const ashmontTargetRef = useRef(null);
+  const braintreeTargetRef = useRef(null);
+  const lastScrolledTrainRef = useRef(null);
+
+  // AUTO-SCROLL TO HIGHLIGHTED TRAIN ONCE PER SELECTION
+  useEffect(() => {
+    if (!highlightedTrainId) {
+      lastScrolledTrainRef.current = null;
+      return;
+    }
+    if (lastScrolledTrainRef.current === highlightedTrainId) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      const el = document.querySelector(".train-marker.highlighted");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        lastScrolledTrainRef.current = highlightedTrainId;
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [highlightedTrainId, vehicles, directionId]);
+
   if (!route)
     return <div className="no-selection-msg">Please select a line above</div>;
 
   const isRedLine = route.id === "Red";
-
-  const ashmontLastRef = useRef(null);
-  const braintreeLastRef = useRef(null);
-
-  // AUTO-SCROLL TO HIGHLIGHTED TRAIN
-  useEffect(() => {
-    if (highlightedTrainId) {
-      // Use a small timeout to allow React to render the new marker
-      const timer = setTimeout(() => {
-        const el = document.querySelector(".train-marker.highlighted");
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightedTrainId, vehicles, directionId]);
 
   const renderRedLine = () => {
     const trunkStops = [];
@@ -233,13 +266,19 @@ const MapView = ({
         {!isOutbound && (
           <>
             <div className="branches-container inbound-merge">
-              <TrackSvg type="merge-inbound" />
+              <TrackSvg
+                type="merge-inbound"
+                ashmontRef={ashmontTargetRef}
+                braintreeRef={braintreeTargetRef}
+                stopsCount={stops.length}
+              />
               <div className="branch-column ashmont-col">
-                {orderedAshmont.map((stop) => (
+                {orderedAshmont.map((stop, i) => (
                   <MapStopRow
                     key={stop.id}
                     stop={stop}
                     vehicles={vehicles}
+                    innerRef={i === 0 ? ashmontTargetRef : null}
                     onStationSelect={onStationSelect}
                     highlightedTrainId={highlightedTrainId}
                   />
@@ -250,11 +289,12 @@ const MapView = ({
                 ></div>
               </div>
               <div className="branch-column braintree-col">
-                {orderedBraintree.map((stop) => (
+                {orderedBraintree.map((stop, i) => (
                   <MapStopRow
                     key={stop.id}
                     stop={stop}
                     vehicles={vehicles}
+                    innerRef={i === 0 ? braintreeTargetRef : null}
                     onStationSelect={onStationSelect}
                     highlightedTrainId={highlightedTrainId}
                   />
@@ -266,7 +306,7 @@ const MapView = ({
               </div>
             </div>
             <div className="trunk-container">
-              <TrackSvg type="trunk-inbound" />
+              <TrackSvg type="trunk-inbound" stopsCount={stops.length} />
               {orderedTrunk.map((stop) => (
                 <MapStopRow
                   key={stop.id}
@@ -283,7 +323,7 @@ const MapView = ({
         {isOutbound && (
           <>
             <div className="trunk-container">
-              <TrackSvg type="trunk-outbound" />
+              <TrackSvg type="trunk-outbound" stopsCount={stops.length} />
               {orderedTrunk.map((stop) => (
                 <MapStopRow
                   key={stop.id}
@@ -297,10 +337,9 @@ const MapView = ({
             <div className="branches-container outbound-split">
               <TrackSvg
                 type="split-outbound"
-                targets={{
-                  ashmont: ashmontLastRef,
-                  braintree: braintreeLastRef,
-                }}
+                ashmontRef={ashmontTargetRef}
+                braintreeRef={braintreeTargetRef}
+                stopsCount={stops.length}
               />
 
               <div className="branch-column ashmont-col">
@@ -314,7 +353,7 @@ const MapView = ({
                     stop={stop}
                     vehicles={vehicles}
                     innerRef={
-                      i === orderedAshmont.length - 1 ? ashmontLastRef : null
+                      i === orderedAshmont.length - 1 ? ashmontTargetRef : null
                     }
                     onStationSelect={onStationSelect}
                     highlightedTrainId={highlightedTrainId}
@@ -334,7 +373,7 @@ const MapView = ({
                     vehicles={vehicles}
                     innerRef={
                       i === orderedBraintree.length - 1
-                        ? braintreeLastRef
+                        ? braintreeTargetRef
                         : null
                     }
                     onStationSelect={onStationSelect}
