@@ -71,6 +71,11 @@ const isNewTrain = (routeId, label) => {
 const filterActiveServiceAlerts = (data) => {
   if (!Array.isArray(data)) return [];
   const nonServiceEffects = [
+    "NOTICE",
+    "SUMMARY",
+    "OTHER_EFFECT",
+    "UNKNOWN_EFFECT",
+    "AMBER_ALERT",
     "ACCESS_ISSUE",
     "FACILITY_ISSUE",
     "BIKE_ISSUE",
