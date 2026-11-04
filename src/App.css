@@ -15,7 +15,6 @@
   --spacing-lg: 20px;
   --radius-card: 12px;
 
-  /* Ensure background applies to the entire root canvas */
   background-color: var(--bg-app);
 }
 
@@ -32,13 +31,12 @@ html {
 body {
   margin: 0;
   padding: 0;
-  width: 100vw;
+  width: 100%;
   max-width: 100%;
-  overflow-x: visible;
+  overflow-x: hidden;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
-  /* background-color is now on :root */
   color: var(--text-primary);
 }
 
@@ -64,10 +62,8 @@ header h1 {
 /* =========================================
    3. SHARED CONTAINERS
    ========================================= */
-/* Wrappers for content blocks */
 .selector-group,
 .favorites-container {
-  /* REMOVED .predictions-container from this list */
   background: var(--bg-card);
   padding: 15px;
   border-radius: var(--radius-card);
@@ -77,7 +73,6 @@ header h1 {
   min-width: 0;
 }
 
-/* Add this to handle layout only */
 .predictions-container {
   margin-bottom: 20px;
 }
@@ -96,11 +91,15 @@ label {
 
 select {
   width: 100%;
-  padding: 12px;
+  padding: 12px 36px 12px 12px;
   font-size: 16px;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
   color: #333;
   white-space: nowrap;
   overflow: hidden;
@@ -126,12 +125,10 @@ select {
   padding-bottom: 5px;
   width: 100%;
 
-  /* Hide scrollbar but allow scrolling */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Chrome/Safari/Webkit specific hide */
 .favorites-list::-webkit-scrollbar {
   display: none;
 }
@@ -165,12 +162,10 @@ select {
   overflow-x: auto;
   padding-bottom: 5px;
 
-  /* Hide scrollbar but allow scrolling */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Chrome/Safari/Webkit specific hide */
 .train-row-container::-webkit-scrollbar {
   display: none;
 }
@@ -215,13 +210,14 @@ select {
   border-top: 1px solid var(--border-light);
   display: flex;
   justify-content: space-around;
-  padding: 2px 0;
+  padding: 4px 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 }
 .nav-item {
   background: none;
   border: none;
+  padding: 4px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
