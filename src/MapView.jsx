@@ -36,6 +36,8 @@ const useContainerSize = () => {
   return [ref, size];
 };
 
+const MAX_STACKED_TRAINS = 4;
+
 // --- Clickable Row ---
 const MapStopRow = ({
   stop,
@@ -44,7 +46,14 @@ const MapStopRow = ({
   onStationSelect,
   highlightedTrainId,
 }) => {
-  const trainsHere = vehicles.filter((v) => v.stopId === stop.id);
+  const allTrainsHere = vehicles.filter((v) => v.stopId === stop.id);
+  const trainsHere =
+    allTrainsHere.length > MAX_STACKED_TRAINS
+      ? [
+          ...allTrainsHere.filter((v) => v.id === highlightedTrainId),
+          ...allTrainsHere.filter((v) => v.id !== highlightedTrainId),
+        ].slice(0, MAX_STACKED_TRAINS)
+      : allTrainsHere;
   const handleKeyDown = (e) => {
     if ((e.key === "Enter" || e.key === " ") && onStationSelect) {
       e.preventDefault();
@@ -136,7 +145,7 @@ const TrackSvg = ({ type, ashmontRef, braintreeRef, stopsCount }) => {
     return <div className="track-svg-layer" ref={ref} />;
 
   // --- GEOMETRY CONFIGURATION ---
-  const STANDARD_AXIS = 42;
+  const STANDARD_AXIS = 68;
   const TRUNK_AXIS = width * 0.4;
   const ASHMONT_AXIS = width * 0.2;
   const BRAINTREE_AXIS = width * 0.6;

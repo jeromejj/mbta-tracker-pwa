@@ -4,7 +4,7 @@
 
 .map-container {
   /* CONSTANTS */
-  --track-axis: 42px;
+  --track-axis: 68px;
   --row-height: 50px;
 }
 
@@ -29,6 +29,7 @@
   border: 1px solid #ddd;
   background: #f9f9f9;
   border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #666;
   cursor: pointer;
@@ -109,21 +110,20 @@
 
 /* LEFT MARKER AREA (Ashmont / Trunk / Standard) */
 .map-marker-area {
-  width: calc(var(--track-axis) * 2);
+  position: absolute;
+  left: var(--track-axis);
+  transform: translateX(-50%);
+  width: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
   flex-shrink: 0;
 }
 
 /* RED LINE PERCENTAGE LAYOUT OVERRIDES */
 /* Trunk: 40% */
 .trunk-container .map-marker-area {
-  position: absolute;
   left: 40%;
-  transform: translateX(-50%);
-  width: 40px;
 }
 
 .trunk-container .map-stop-name {
@@ -132,10 +132,7 @@
 
 /* Ashmont: 40% of its column (which is 20% of total) */
 .ashmont-col .map-marker-area {
-  position: absolute;
   left: 40%;
-  transform: translateX(-50%);
-  width: 40px;
 }
 
 .ashmont-col .map-stop-name {
@@ -144,10 +141,7 @@
 
 /* Braintree: 20% of its column (which is 60% of total) */
 .braintree-col .map-marker-area {
-  position: absolute;
   left: 20%;
-  transform: translateX(-50%);
-  width: 40px;
 }
 
 .braintree-col .map-stop-name {
@@ -160,7 +154,7 @@
   color: #333;
   font-weight: 500;
   flex: 1;
-  padding-left: 0;
+  padding-left: calc(var(--track-axis) + 24px);
   padding-right: 10px;
 }
 
