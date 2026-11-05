@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 import FavoritesTab, { PredictionCard } from "./Favorite";
+import { SearchIcon, StarIcon, MapIcon, AlertIcon } from "./Icons";
 import InstallPrompt from "./InstallPrompt";
 import MapView from "./MapView";
 
@@ -953,7 +954,9 @@ function App() {
               <div className="alert-container fade-in">
                 {alerts.map((alert) => (
                   <div key={alert.id} className="alert-box">
-                    <span className="alert-icon">⚠️</span>
+                    <span className="alert-icon">
+                      <AlertIcon size={18} />
+                    </span>
                     <div className="alert-content">
                       <strong>
                         {alert.attributes.service_effect || "Service Alert"}
@@ -1063,7 +1066,9 @@ function App() {
               <div className="alert-container fade-in">
                 {alerts.map((alert) => (
                   <div key={alert.id} className="alert-box">
-                    <span className="alert-icon">⚠️</span>
+                    <span className="alert-icon">
+                      <AlertIcon size={18} />
+                    </span>
                     <div className="alert-content">
                       <strong>
                         {alert.attributes.service_effect || "Service Alert"}
@@ -1096,7 +1101,9 @@ function App() {
           className={`nav-item ${currentTab === "list" ? "active" : ""}`}
           onClick={() => handleTabChange("list")}
         >
-          <span className="nav-icon">🔍</span>
+          <span className="nav-icon">
+            <SearchIcon size={20} />
+          </span>
           <span className="nav-label">Search</span>
         </button>
         <button
@@ -1104,7 +1111,9 @@ function App() {
           className={`nav-item ${currentTab === "favorites" ? "active" : ""}`}
           onClick={() => handleTabChange("favorites")}
         >
-          <span className="nav-icon">★</span>
+          <span className="nav-icon">
+            <StarIcon size={20} filled={currentTab === "favorites"} />
+          </span>
           <span className="nav-label">Favorites</span>
         </button>
         <button
@@ -1112,7 +1121,9 @@ function App() {
           className={`nav-item ${currentTab === "map" ? "active" : ""}`}
           onClick={() => handleTabChange("map")}
         >
-          <span className="nav-icon">🗺️</span>
+          <span className="nav-icon">
+            <MapIcon size={20} />
+          </span>
           <span className="nav-label">Map</span>
         </button>
       </nav>
