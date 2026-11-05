@@ -111,6 +111,8 @@
 /* LEFT MARKER AREA (Ashmont / Trunk / Standard) */
 .map-marker-area {
   position: absolute;
+  top: 0;
+  bottom: 0;
   left: var(--track-axis);
   transform: translateX(-50%);
   width: 40px;
@@ -171,20 +173,35 @@
 
 .train-marker {
   position: absolute;
+  top: 50%;
   left: 50%;
+  margin-top: -14px;
   margin-left: -14px;
+  padding: 0;
   background: white;
   border: 2px solid var(--line-color);
+  color: var(--line-color);
   border-radius: 50%;
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  line-height: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 2;
   transition: background-color 0.3s, transform 0.3s, margin-left 0.3s;
+}
+
+.train-marker.new-train {
+  color: #d97706;
+}
+
+.train-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 .train-marker.moving {
@@ -213,6 +230,7 @@
 .train-marker.highlighted {
   background-color: #ffd700; /* Gold */
   border-color: #000;
+  color: #000;
   z-index: 10; /* Pop on top */
   transform: scale(1.3); /* Bigger */
   box-shadow: 0 0 15px rgba(0,0,0,0.5);

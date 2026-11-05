@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { StarIcon, AlertIcon, SparklesIcon } from "./Icons";
 import "./Favorite.css";
 
 const getFavoriteKey = (routeId, stopId) => `${routeId}:${stopId}`;
@@ -37,7 +38,7 @@ export const PredictionCard = ({
                 aria-expanded={showAlerts}
                 onClick={() => setShowAlerts((prev) => !prev)}
               >
-                ⚠️
+                <AlertIcon size={17} />
               </button>
             )}
             {onStarClick && (
@@ -49,7 +50,7 @@ export const PredictionCard = ({
                 }
                 onClick={onStarClick}
               >
-                {isFav ? "★" : "☆"}
+                <StarIcon size={20} filled={Boolean(isFav)} />
               </button>
             )}
           </h2>
@@ -73,7 +74,9 @@ export const PredictionCard = ({
         <div className="fav-alerts-panel">
           {alerts.map((alert) => (
             <div key={alert.id} className="alert-box">
-              <span className="alert-icon">⚠️</span>
+              <span className="alert-icon">
+                <AlertIcon size={18} />
+              </span>
               <div className="alert-content">
                 <strong>
                   {alert.attributes?.service_effect || "Service Alert"}
@@ -128,7 +131,11 @@ export const PredictionCard = ({
                             <span className="pill-branch-tag">{t.branch}</span>
                           )}
                           {t.minutes}
-                          {t.isNew && <span className="new-badge">✨</span>}
+                          {t.isNew && (
+                            <span className="new-badge" title="New Train">
+                              <SparklesIcon size={14} />
+                            </span>
+                          )}
                         </span>
                       </button>
                     ))}
@@ -182,7 +189,7 @@ const FavoritesTab = ({
         <div className="no-data-msg">
           <p>No favorites yet.</p>
           <small>
-            Go to the Search or Map tab and tap the star (☆) to save stations
+            Go to the Search or Map tab and tap the star icon to save stations
             here.
           </small>
         </div>

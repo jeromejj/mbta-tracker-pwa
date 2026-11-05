@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { TrainIcon, SparklesIcon } from "./Icons";
 import "./MapView.css";
 
 // --- CONFIGURATION ---
@@ -87,9 +88,17 @@ const MapStopRow = ({
               }
               className={`train-marker ${
                 train.status === "IN_TRANSIT_TO" ? "moving" : ""
-              } ${train.id === highlightedTrainId ? "highlighted" : ""}`}
+              } ${train.isNew ? "new-train" : ""} ${
+                train.id === highlightedTrainId ? "highlighted" : ""
+              }`}
             >
-              <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
+              <span className="train-icon">
+                {train.isNew ? (
+                  <SparklesIcon size={15} />
+                ) : (
+                  <TrainIcon size={15} />
+                )}
+              </span>
               {train.branch && (
                 <span className="train-branch-badge">{train.branch}</span>
               )}
