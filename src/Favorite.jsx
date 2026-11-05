@@ -94,7 +94,15 @@ export const PredictionCard = ({
               <h4 className="direction-label">{dirGroup.direction}</h4>
               {dirGroup.groups.map((group) => (
                 <div key={group.name} className="destination-group">
-                  <h3>{group.name}</h3>
+                  <h3 className="destination-heading">
+                    {group.branches &&
+                      group.branches.map((branch) => (
+                        <span key={branch} className="branch-badge">
+                          {branch}
+                        </span>
+                      ))}
+                    <span>{group.name}</span>
+                  </h3>
                   <div className="train-row-container">
                     {group.trains.map((t) => (
                       <button
@@ -116,6 +124,9 @@ export const PredictionCard = ({
                         }}
                       >
                         <span className="time">
+                          {group.branches?.length > 1 && t.branch && (
+                            <span className="pill-branch-tag">{t.branch}</span>
+                          )}
                           {t.minutes}
                           {t.isNew && <span className="new-badge">✨</span>}
                         </span>

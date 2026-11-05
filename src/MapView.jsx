@@ -65,10 +65,12 @@ const MapStopRow = ({
         <div className="stop-dot"></div>
         {trainsHere.map((train, idx) => {
           const offsetPx = -idx * 14;
+          const titlePrefix = train.branch ? `Green-${train.branch} ` : "";
+          const titleSuffix = train.label ? ` #${train.label}` : "";
           return (
             <div
               key={train.id}
-              title={train.label ? `Train #${train.label}` : "Train"}
+              title={`${titlePrefix}Train${titleSuffix}`}
               style={
                 offsetPx !== 0
                   ? { marginLeft: `${-14 + offsetPx}px` }
@@ -79,6 +81,9 @@ const MapStopRow = ({
               } ${train.id === highlightedTrainId ? "highlighted" : ""}`}
             >
               <span className="train-icon">{train.isNew ? "✨" : "🚇"}</span>
+              {train.branch && (
+                <span className="train-branch-badge">{train.branch}</span>
+              )}
             </div>
           );
         })}

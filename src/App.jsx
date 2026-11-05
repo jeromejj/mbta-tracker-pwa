@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 import FavoritesTab, { PredictionCard } from "./Favorite";
 import InstallPrompt from "./InstallPrompt";
@@ -26,6 +26,31 @@ const SUBWAY_FILTERS = [
   "749",
 ];
 
+const GREEN_BRANCH_IDS = ["Green-B", "Green-C", "Green-D", "Green-E"];
+
+const GREEN_CENTRAL_ROUTE = {
+  id: "Green",
+  attributes: {
+    long_name: "Green Line (Central Subway)",
+    direction_names: ["West", "East"],
+    sort_order: 10031,
+  },
+};
+
+const GREEN_BRANCH_OPTIONS = [
+  { id: "Green", label: "Central" },
+  { id: "Green-B", label: "B" },
+  { id: "Green-C", label: "C" },
+  { id: "Green-D", label: "D" },
+  { id: "Green-E", label: "E" },
+];
+
+const isGreenRoute = (routeId) =>
+  routeId === "Green" || GREEN_BRANCH_IDS.includes(routeId);
+
+const getGreenBranchLetter = (routeId) =>
+  routeId && routeId.startsWith("Green-") ? routeId.split("-")[1] : null;
+
 const TRUNK_STATIONS = {
   Copley: "Green-B,Green-C,Green-D,Green-E",
   Arlington: "Green-B,Green-C,Green-D,Green-E",
@@ -46,11 +71,11 @@ const ALERT_POLL_INTERVAL_MS = 60000;
 const getTrunkRouteFilter = (stopName, routeId) => {
   if (stopName && TRUNK_STATIONS[stopName]) {
     const trunkRoutes = TRUNK_STATIONS[stopName];
-    if (trunkRoutes.split(",").includes(routeId)) {
+    if (routeId === "Green" || trunkRoutes.split(",").includes(routeId)) {
       return trunkRoutes;
     }
   }
-  return routeId;
+  return routeId === "Green" ? GREEN_BRANCH_IDS.join(",") : routeId;
 };
 
 const normalizeName = (name) => {
@@ -164,6 +189,8 @@ const useMbtaData = () => {
   const [loading, setLoading] = useState(false);
 
   const stopsRequestIdRef = useRef(0);
+  const stopsCacheRef = useRef({});
+  const greenAlertsCacheRef = useRef(null);
 
   const apiFetchJson = useCallback(async (url, signal) => {
     const apiKey = import.meta.env.VITE_MBTA_API_KEY;
@@ -199,7 +226,9 @@ const useMbtaData = () => {
       const directionMap = {};
 
       const getDirectionName = (dirId) => {
-        const route = routes.find((r) => r.id === routeId);
+        const route =
+          routes.find((r) => r.id === routeId) ||
+          (routeId === "Green" ? GREEN_CENTRAL_ROUTE : null);
         const names = route?.attributes?.direction_names || [
           "Outbound",
           "Inbound",
@@ -231,9 +260,7 @@ const useMbtaData = () => {
         let sortTime = null;
 
         if (arrivalMs !== null || departureMs !== null) {
-          // If the train has already departed this stop, skip it
           if (departureMs !== null && departureMs < nowMs) return;
-          // Terminal arrival with no departure time that already passed >30s ago
           if (
             departureMs === null &&
             arrivalMs !== null &&
@@ -261,6 +288,7 @@ const useMbtaData = () => {
         const vehicleId = pred.relationships?.vehicle?.data?.id;
         const actualRouteId =
           pred.relationships?.route?.data?.id || routeId;
+        const branchLetter = getGreenBranchLetter(actualRouteId);
 
         let headsign =
           tripMap[tripId] || pred.attributes?.headsign || "Train";
@@ -268,7 +296,9 @@ const useMbtaData = () => {
         const currentVehicleDir = vehicleDirMap[vehicleId];
 
         if (headsign === "Green Line D") headsign = "Riverside";
-        if (headsign === "Green Line E") headsign = "Heath St";
+        if (headsign === "Green Line E" || headsign === "Heath St") {
+          headsign = "Heath Street";
+        }
         if (stopNameNorm && normalizeName(headsign) === stopNameNorm) return;
 
         const dirId = pred.attributes?.direction_id;
@@ -283,13 +313,19 @@ const useMbtaData = () => {
         if (!directionMap[dirId].subgroups[headsign]) {
           directionMap[dirId].subgroups[headsign] = {
             name: headsign,
+            branches: new Set(),
             trains: [],
           };
+        }
+
+        if (branchLetter) {
+          directionMap[dirId].subgroups[headsign].branches.add(branchLetter);
         }
 
         directionMap[dirId].subgroups[headsign].trains.push({
           id: pred.id,
           routeId: actualRouteId,
+          branch: branchLetter,
           directionId: dirId,
           vehicleId: vehicleId,
           vehicleDirectionId: currentVehicleDir,
@@ -306,10 +342,16 @@ const useMbtaData = () => {
           directionId: dirGroup.id,
           groups: Object.values(dirGroup.subgroups)
             .map((sub) => ({
-              ...sub,
+              name: sub.name,
+              branches: [...sub.branches].sort(),
               trains: sub.trains.sort((a, b) => a.sortTime - b.sortTime),
             }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
+            .sort((a, b) => {
+              const branchA = a.branches[0] || "";
+              const branchB = b.branches[0] || "";
+              if (branchA !== branchB) return branchA.localeCompare(branchB);
+              return a.name.localeCompare(b.name);
+            }),
         }))
         .sort((a, b) => a.directionId - b.directionId);
     },
@@ -344,14 +386,36 @@ const useMbtaData = () => {
   const fetchStops = useCallback(
     async (routeId) => {
       const requestId = ++stopsRequestIdRef.current;
+
+      // Return immediately from in-memory cache if available
+      if (stopsCacheRef.current[routeId]) {
+        const cached = stopsCacheRef.current[routeId];
+        setStops(cached);
+        setLoading(false);
+        return cached;
+      }
+
       setLoading(true);
       setStops([]);
-      setPredictionGroups([]);
       try {
+        const apiRoute = routeId === "Green" ? "Green-D" : routeId;
         const json = await apiFetchJson(
-          `https://api-v3.mbta.com/stops?filter[route]=${routeId}`
+          `https://api-v3.mbta.com/stops?filter[route]=${apiRoute}`
         );
-        const newStops = json.data || [];
+        const rawStops = json.data || [];
+        if (rawStops.length > 0) {
+          stopsCacheRef.current[apiRoute] = rawStops;
+          if (apiRoute === "Green-D") {
+            stopsCacheRef.current["Green"] = rawStops.filter((s) =>
+              Boolean(TRUNK_STATIONS[s.attributes?.name])
+            );
+          }
+        }
+        const newStops =
+          stopsCacheRef.current[routeId] ||
+          (routeId === "Green"
+            ? rawStops.filter((s) => Boolean(TRUNK_STATIONS[s.attributes?.name]))
+            : rawStops);
         if (requestId === stopsRequestIdRef.current) {
           setStops(newStops);
         }
@@ -426,8 +490,11 @@ const useMbtaData = () => {
   const fetchVehicles = useCallback(
     async (routeId, directionId, signal) => {
       try {
+        const routeFilter = isGreenRoute(routeId)
+          ? GREEN_BRANCH_IDS.join(",")
+          : routeId;
         const json = await apiFetchJson(
-          `https://api-v3.mbta.com/vehicles?filter[route]=${routeId}&include=stop`,
+          `https://api-v3.mbta.com/vehicles?filter[route]=${routeFilter}&include=stop`,
           signal
         );
         const stopParentMap = {};
@@ -444,12 +511,16 @@ const useMbtaData = () => {
           .map((v) => {
             const rawStopId = v.relationships?.stop?.data?.id;
             const parentStationId = stopParentMap[rawStopId] || rawStopId;
+            const vehicleRouteId =
+              v.relationships?.route?.data?.id || routeId;
             return {
               id: v.id,
+              routeId: vehicleRouteId,
+              branch: getGreenBranchLetter(vehicleRouteId),
               status: v.attributes?.current_status,
               stopId: parentStationId,
               label: v.attributes?.label,
-              isNew: isNewTrain(routeId, v.attributes?.label),
+              isNew: isNewTrain(vehicleRouteId, v.attributes?.label),
             };
           });
         setVehicles(activeTrains);
@@ -465,6 +536,30 @@ const useMbtaData = () => {
   const fetchAlerts = useCallback(
     async (routeId, signal) => {
       try {
+        if (isGreenRoute(routeId)) {
+          let allGreenAlerts = greenAlertsCacheRef.current;
+          if (!allGreenAlerts) {
+            const json = await apiFetchJson(
+              `https://api-v3.mbta.com/alerts?filter[route]=${GREEN_BRANCH_IDS.join(",")}`,
+              signal
+            );
+            allGreenAlerts = filterActiveServiceAlerts(json.data);
+            greenAlertsCacheRef.current = allGreenAlerts;
+          }
+          if (routeId === "Green") {
+            setAlerts(allGreenAlerts);
+          } else {
+            setAlerts(
+              allGreenAlerts.filter((a) =>
+                (a.attributes?.informed_entity || []).some(
+                  (e) => e.route === routeId
+                )
+              )
+            );
+          }
+          return;
+        }
+
         const json = await apiFetchJson(
           `https://api-v3.mbta.com/alerts?filter[route]=${routeId}`,
           signal
@@ -555,6 +650,26 @@ const getLineColor = (routeId) => {
   return "#003da5";
 };
 
+const GreenBranchSelector = ({ selectedRouteId, onSelectBranch }) => (
+  <div className="green-branch-selector">
+    <span className="green-branch-label">Branch</span>
+    <div className="green-branch-pills">
+      {GREEN_BRANCH_OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          className={`green-branch-pill ${
+            selectedRouteId === opt.id ? "active" : ""
+          }`}
+          onClick={() => onSelectBranch(opt.id)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
 // --- MAIN APP ---
 function App() {
   const {
@@ -584,6 +699,40 @@ function App() {
   const [mapDirection, setMapDirection] = useState(0);
   const [highlightedTrainId, setHighlightedTrainId] = useState(null);
 
+  // Collapse Green-B/C/D/E into a single "Green Line" option in the top dropdown
+  const selectorRoutes = useMemo(() => {
+    const result = [];
+    let greenInserted = false;
+    routes.forEach((route) => {
+      if (GREEN_BRANCH_IDS.includes(route.id)) {
+        if (!greenInserted) {
+          result.push({
+            id: "Green",
+            attributes: {
+              ...GREEN_CENTRAL_ROUTE.attributes,
+              long_name: "Green Line",
+            },
+          });
+          greenInserted = true;
+        }
+      } else {
+        result.push(route);
+      }
+    });
+    return result;
+  }, [routes]);
+
+  const dropdownRouteValue = isGreenRoute(selectedRoute?.id)
+    ? "Green"
+    : selectedRoute?.id || "";
+
+  // On the Map tab, all Green Line branches share the same vehicle feed ("Green")
+  const mapVehicleFamily = selectedRoute
+    ? isGreenRoute(selectedRoute.id)
+      ? "Green"
+      : selectedRoute.id
+    : null;
+
   const handleTabChange = (tab) => {
     setCurrentTab(tab);
     if (tab !== "map") {
@@ -591,11 +740,12 @@ function App() {
     }
   };
 
-  // Poll predictions and vehicles when tab is visible
+  // Poll predictions (Search & Favorites tabs)
   useEffect(() => {
+    if (currentTab === "map") return;
     const controller = new AbortController();
 
-    const poll = () => {
+    const pollPredictions = () => {
       if (document.visibilityState === "hidden") return;
       if (currentTab === "list" && selectedRoute && selectedStop) {
         fetchPredictions(
@@ -606,17 +756,15 @@ function App() {
         );
       } else if (currentTab === "favorites" && favorites.length > 0) {
         fetchAllFavorites(favorites, controller.signal);
-      } else if (currentTab === "map" && selectedRoute) {
-        fetchVehicles(selectedRoute.id, mapDirection, controller.signal);
       }
     };
 
-    poll();
-    const intervalId = setInterval(poll, POLL_INTERVAL_MS);
+    pollPredictions();
+    const intervalId = setInterval(pollPredictions, POLL_INTERVAL_MS);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        poll();
+        pollPredictions();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -630,12 +778,37 @@ function App() {
     currentTab,
     selectedRoute,
     selectedStop,
-    mapDirection,
     favorites,
     fetchPredictions,
     fetchAllFavorites,
-    fetchVehicles,
   ]);
+
+  // Poll vehicles (Map tab only; switching Green Line branches reuses the shared Green vehicle feed)
+  useEffect(() => {
+    if (currentTab !== "map" || !mapVehicleFamily) return;
+    const controller = new AbortController();
+
+    const pollVehicles = () => {
+      if (document.visibilityState === "hidden") return;
+      fetchVehicles(mapVehicleFamily, mapDirection, controller.signal);
+    };
+
+    pollVehicles();
+    const intervalId = setInterval(pollVehicles, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pollVehicles();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      controller.abort();
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [currentTab, mapVehicleFamily, mapDirection, fetchVehicles]);
 
   // Poll favorite alerts at a slower 60s cadence in a single batched request
   useEffect(() => {
@@ -663,17 +836,46 @@ function App() {
     return () => controller.abort();
   }, [selectedRoute, fetchAlerts]);
 
+  const selectRouteById = async (routeId, preserveStop = false) => {
+    const routeObj =
+      routeId === "Green"
+        ? GREEN_CENTRAL_ROUTE
+        : routes.find((r) => r.id === routeId) || null;
+    const prevRouteId = selectedRoute?.id;
+    const prevStop = selectedStop;
+    const stayingOnGreen =
+      isGreenRoute(prevRouteId) && isGreenRoute(routeId);
+
+    setSelectedRoute(routeObj);
+    if (!preserveStop) {
+      setSelectedStop(null);
+      setPredictionGroups([]);
+    }
+    if (!stayingOnGreen) {
+      setVehicles([]);
+      setAlerts([]);
+    }
+
+    if (routeId) {
+      const newStops = await fetchStops(routeId);
+      if (preserveStop && prevStop) {
+        const stillExists = newStops.some((s) => s.id === prevStop.id);
+        if (!stillExists) {
+          setSelectedStop(null);
+          setPredictionGroups([]);
+        }
+      }
+    }
+  };
+
   const handleRouteSelect = async (e) => {
     const routeId = e.target.value;
-    const routeObj = routes.find((r) => r.id === routeId) || null;
-    setSelectedRoute(routeObj);
-    setSelectedStop(null);
-    setPredictionGroups([]);
-    setVehicles([]);
-    setAlerts([]);
-    if (routeId) {
-      await fetchStops(routeId);
-    }
+    await selectRouteById(routeId, false);
+  };
+
+  const handleGreenBranchSelect = async (branchRouteId) => {
+    if (selectedRoute?.id === branchRouteId) return;
+    await selectRouteById(branchRouteId, true);
   };
 
   const handleStopSelect = (e) => {
@@ -692,11 +894,11 @@ function App() {
   const handleTrainClick = async (train) => {
     if (!train.vehicleId) return;
 
-    const routeObj = routes.find((r) => r.id === train.routeId);
-    if (routeObj && (!selectedRoute || selectedRoute.id !== train.routeId)) {
-      setSelectedRoute(routeObj);
-      setSelectedStop(null);
-      await fetchStops(train.routeId);
+    if (
+      train.routeId &&
+      (!selectedRoute || selectedRoute.id !== train.routeId)
+    ) {
+      await selectRouteById(train.routeId, true);
     }
 
     const dirToSet =
@@ -727,17 +929,24 @@ function App() {
               <select
                 id="search-route-select"
                 onChange={handleRouteSelect}
-                value={selectedRoute?.id || ""}
+                value={dropdownRouteValue}
               >
                 <option value="" disabled>
                   -- Choose a Line --
                 </option>
-                {routes.map((route) => (
+                {selectorRoutes.map((route) => (
                   <option key={route.id} value={route.id}>
                     {route.attributes.long_name}
                   </option>
                 ))}
               </select>
+
+              {isGreenRoute(selectedRoute?.id) && (
+                <GreenBranchSelector
+                  selectedRouteId={selectedRoute.id}
+                  onSelectBranch={handleGreenBranchSelect}
+                />
+              )}
             </div>
 
             {alerts.length > 0 && (
@@ -758,7 +967,11 @@ function App() {
 
             {selectedRoute && (
               <div className="selector-group fade-in">
-                <label htmlFor="search-stop-select">Select Station</label>
+                <label htmlFor="search-stop-select">
+                  {selectedRoute.id === "Green"
+                    ? "Select Central Subway Station"
+                    : "Select Station"}
+                </label>
                 <select
                   id="search-stop-select"
                   onChange={handleStopSelect}
@@ -783,6 +996,16 @@ function App() {
               <div className="predictions-container fade-in">
                 <PredictionCard
                   title={selectedStop.attributes.name}
+                  subtitle={
+                    TRUNK_STATIONS[selectedStop.attributes.name] &&
+                    isGreenRoute(selectedRoute?.id)
+                      ? `Green Line (${TRUNK_STATIONS[
+                          selectedStop.attributes.name
+                        ]
+                          .replace(/Green-/g, "")
+                          .replace(/,/g, " · ")})`
+                      : undefined
+                  }
                   groups={predictionGroups}
                   isFav={isFavorite(selectedStop.id, selectedRoute?.id)}
                   onStarClick={() =>
@@ -816,17 +1039,24 @@ function App() {
               <select
                 id="map-route-select"
                 onChange={handleRouteSelect}
-                value={selectedRoute?.id || ""}
+                value={dropdownRouteValue}
               >
                 <option value="" disabled>
                   -- Choose a Line --
                 </option>
-                {routes.map((route) => (
+                {selectorRoutes.map((route) => (
                   <option key={route.id} value={route.id}>
                     {route.attributes.long_name}
                   </option>
                 ))}
               </select>
+
+              {isGreenRoute(selectedRoute?.id) && (
+                <GreenBranchSelector
+                  selectedRouteId={selectedRoute.id}
+                  onSelectBranch={handleGreenBranchSelect}
+                />
+              )}
             </div>
 
             {alerts.length > 0 && (

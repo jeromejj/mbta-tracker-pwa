@@ -107,6 +107,49 @@ select {
   appearance: none;
 }
 
+.green-branch-selector {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eeeeee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.green-branch-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.green-branch-pills {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.green-branch-pill {
+  padding: 6px 11px;
+  border: 1px solid var(--border-light);
+  background: #f9f9f9;
+  color: #444;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.green-branch-pill.active {
+  background: #00843d;
+  color: #ffffff;
+  border-color: #00843d;
+}
+
 /* =========================================
    5. LIST ITEMS
    ========================================= */
