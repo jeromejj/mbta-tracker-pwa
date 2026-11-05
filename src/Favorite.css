@@ -19,10 +19,44 @@
 }
 
 .destination-group h3 {
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   font-size: 0.95rem;
   color: #444;
   padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.branch-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #00843d;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pill-branch-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background-color: #00843d;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-right: 5px;
+  line-height: 1;
+  vertical-align: text-bottom;
 }
 
 /* --- HEADER INSIDE CARD --- */
